@@ -169,5 +169,5 @@ if __name__ == '__main__':
         'GeneralizedVector': GeneralizedVector
     }[args.model]
 
-    server = socketserver.TCPServer(('0.0.0.0', 9901), TCPHandler)
+    server = socketserver.TCPServer(('0.0.0.0', 9903), TCPHandler)
     server.serve_forever()

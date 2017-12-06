@@ -102,5 +102,5 @@ if __name__ == '__main__':
         'VectorIndex': VectorIndex,
     }[args.model]
 
-    server = socketserver.TCPServer(('0.0.0.0', 9902), TCPHandler)
+    server = socketserver.TCPServer(('0.0.0.0', 9904), TCPHandler)
     server.serve_forever()
