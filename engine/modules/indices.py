@@ -104,5 +104,5 @@ if __name__ == '__main__':
     }[args.model]
     NETWORK = json.load(open(args.network))
 
-    server = socketserver.TCPServer((NETWORK['indices']['address'], NETWORK['indices']['port']), TCPHandler)
+    server = socketserver.TCPServer((NETWORK['indices']['host'], NETWORK['indices']['port']), TCPHandler)
     server.serve_forever()

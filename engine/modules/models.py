@@ -122,7 +122,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
         super().__init__(*args, **kwargs)
 
     def handle(self):
-        data = self.request.recv(1024).strip()
+        data = self.request.recv(1024).decode()
         request = json.loads(data)
 
         if request['action'] == 'build':
@@ -171,5 +171,5 @@ if __name__ == '__main__':
     }[args.model]
     NETWORK = json.load(open(args.network))
 
-    server = socketserver.TCPServer((NETWORK['models']['address'], NETWORK['models']['port']), TCPHandler)
+    server = socketserver.TCPServer((NETWORK['models']['host'], NETWORK['models']['port']), TCPHandler)
     server.serve_forever()

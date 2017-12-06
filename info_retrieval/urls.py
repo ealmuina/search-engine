@@ -20,6 +20,7 @@ import engine.views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('search/', engine.views.search),
     path('index/', engine.views.index),
     path('', engine.views.index),
 ]

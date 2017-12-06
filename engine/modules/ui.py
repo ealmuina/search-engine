@@ -1,33 +1,31 @@
-import argparse
 import json
-import socketserver
+import socket
+
+from django.conf import settings
 
 
-class TCPHandler(socketserver.BaseRequestHandler):
-    def __init__(self, *args, **kwargs):
-        self.index = None
-        super().__init__(*args, **kwargs)
-
-    def handle(self):
-        data = self.request.recv(1024).decode()
-        request = json.loads(data)
-
-        if request['action'] == 'report':
-            if request['success']:
-                pass
-            else:
-                pass
-        else:
-            # TODO Show error message
-            pass
+def build(path):
+    send_to_models(json.dumps({
+        'action': 'build',
+        'path': path
+    }))
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('network')
-    args = parser.parse_args()
+def search(query, count):
+    response = send_to_models(json.dumps({
+        'action': 'query',
+        'query': query,
+        'count': count
+    }), True)
+    return json.loads(response)
 
-    NETWORK = json.load(open(args.network))
 
-    server = socketserver.TCPServer((NETWORK['ui']['address'], NETWORK['ui']['port']), TCPHandler)
-    server.serve_forever()
+def send_to_models(request, wait_response=False):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        # Connect to models module server and send request
+        sock.connect((settings.NETWORK['models']['host'], settings.NETWORK['models']['port']))
+        sock.sendall(request.encode())
+
+        if wait_response:
+            # Receive data from the server and shut down
+            return sock.recv(1024).decode()

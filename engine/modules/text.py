@@ -35,5 +35,5 @@ if __name__ == '__main__':
 
     NETWORK = json.load(open(args.network))
 
-    server = socketserver.TCPServer((NETWORK['text']['address'], NETWORK['text']['port']), TCPHandler)
+    server = socketserver.TCPServer((NETWORK['text']['host'], NETWORK['text']['port']), TCPHandler)
     server.serve_forever()
