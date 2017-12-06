@@ -128,15 +128,13 @@ class TCPHandler(socketserver.BaseRequestHandler):
         if request['action'] == 'build':
             self.model = MODEL()
             self.model.build(request['path'])
+        elif not self.model:
+            self.request.sendall(json.dumps({
+                'action': 'error',
+                'message': 'Uninitialized model. Please request a "build" action before any other operation.'
+            }).encode())
         elif request['action'] == 'query':
-            if self.model:
-                response = self.model.query(request['query'], request['count'])
-            else:
-                response = json.dumps({
-                    'action': 'error',
-                    'message': 'Uninitialized model. Please request a "build" action first.'
-                })
-            self.request.sendall(response.encode())
+            self.request.sendall(self.model.query(request['query'], request['count']).encode())
         else:
             self.request.sendall(json.dumps({
                 'action': 'error',
@@ -163,7 +161,7 @@ def test():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('model')
+    parser.add_argument('--model', default='GeneralizedVector')
     args = parser.parse_args()
 
     MODEL = {
