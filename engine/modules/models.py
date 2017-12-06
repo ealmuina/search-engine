@@ -161,6 +161,7 @@ def test():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('network')
     parser.add_argument('--model', default='GeneralizedVector')
     args = parser.parse_args()
 
@@ -168,6 +169,7 @@ if __name__ == '__main__':
         'Vector': Vector,
         'GeneralizedVector': GeneralizedVector
     }[args.model]
+    NETWORK = json.load(open(args.network))
 
-    server = socketserver.TCPServer(('0.0.0.0', 9903), TCPHandler)
+    server = socketserver.TCPServer((NETWORK['models']['address'], NETWORK['models']['port']), TCPHandler)
     server.serve_forever()

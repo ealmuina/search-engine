@@ -1,3 +1,4 @@
+import argparse
 import json
 import socketserver
 
@@ -28,5 +29,11 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
 
 if __name__ == '__main__':
-    server = socketserver.TCPServer(('0.0.0.0', 9902), TCPHandler)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('network')
+    args = parser.parse_args()
+
+    NETWORK = json.load(open(args.network))
+
+    server = socketserver.TCPServer((NETWORK['text']['address'], NETWORK['text']['port']), TCPHandler)
     server.serve_forever()

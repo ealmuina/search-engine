@@ -95,12 +95,14 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('network')
     parser.add_argument('--model', default='VectorIndex')
     args = parser.parse_args()
 
     INDEX = {
         'VectorIndex': VectorIndex,
     }[args.model]
+    NETWORK = json.load(open(args.network))
 
-    server = socketserver.TCPServer(('0.0.0.0', 9904), TCPHandler)
+    server = socketserver.TCPServer((NETWORK['indices']['address'], NETWORK['indices']['port']), TCPHandler)
     server.serve_forever()
