@@ -10,6 +10,8 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from engine.modules.utils import receive_string
+
 
 def _analyzer(document):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -19,9 +21,10 @@ def _analyzer(document):
             'action': 'process',
             'data': document.read()
         }).encode())
+        sock.shutdown(socket.SHUT_WR)
 
-        response = sock.recv(1024).decode()
-        return response['terms']
+        response = receive_string(sock)
+        return json.loads(response)['terms']
 
 
 class _VectorBasedModel:
@@ -144,7 +147,11 @@ class GeneralizedVector(_VectorBasedModel):
         index = []
         for i in range(self.term_count):
             entry = {"key": self.terms[i]}
-            value = {'id': i, 'k': self.k[i], 'documents': []}
+            value = {'id': i, 'correlations': [], 'documents': []}
+            for ii in range(self.term_count):
+                if self.k[i, ii]:
+                    # noinspection PyTypeChecker
+                    value['correlations'].append({'term': ii, 'k': self.k[i, ii]})
             for j in range(self.doc_count):
                 if self.w[i, j]:
                     # noinspection PyTypeChecker
@@ -167,7 +174,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
         super().__init__(*args, **kwargs)
 
     def handle(self):
-        data = self.request.recv(1024).decode()
+        data = receive_string(self.request)
         request = json.loads(data)
 
         if request['action'] == 'build':

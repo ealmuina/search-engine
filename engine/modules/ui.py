@@ -3,6 +3,7 @@ import socket
 
 from django.conf import settings
 
+from engine.modules.utils import receive_string
 
 def build(path):
     send_to_models(json.dumps({
@@ -28,4 +29,4 @@ def send_to_models(request, wait_response=False):
 
         if wait_response:
             # Receive data from the server and shut down
-            return sock.recv(1024).decode()
+            return receive_string(sock)

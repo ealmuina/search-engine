@@ -5,6 +5,8 @@ import socketserver
 
 import django
 
+from engine.modules.utils import receive_string
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'info_retrieval.settings')
 django.setup()
 
@@ -74,7 +76,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
         super().__init__(*args, **kwargs)
 
     def handle(self):
-        data = self.request.recv(1024).decode()
+        data = receive_string(self.request)
         request = json.loads(data)
 
         if request['action'] == 'create':

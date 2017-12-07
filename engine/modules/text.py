@@ -2,6 +2,8 @@ import argparse
 import json
 import socketserver
 
+from engine.modules.utils import receive_string
+
 
 def process(data):
     # TODO Do some actual work
@@ -17,7 +19,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
         super().__init__(*args, **kwargs)
 
     def handle(self):
-        data = self.request.recv(1024).decode()
+        data = receive_string(self.request)
         request = json.loads(data)
 
         if request['action'] == 'process':
