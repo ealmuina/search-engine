@@ -10,10 +10,17 @@ from engine.modules.utils import receive_string
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'info_retrieval.settings')
 django.setup()
 
-from engine.models import Term, Occurrence
+from engine.models import Term, Occurrence, Correlation
 
 
 class VectorIndex:
+    @staticmethod
+    def _add_correlations(term, value):
+        bulk = []
+        for correlation in value['correlations']:
+            bulk.append(Correlation(term1=term, term2_id=correlation['term'], k=correlation['k']))
+        Correlation.objects.bulk_create(bulk)
+
     @staticmethod
     def _add_occurrences(term, value):
         bulk = []
@@ -24,18 +31,19 @@ class VectorIndex:
     @staticmethod
     def add(key, value):
         term = Term(name=key)
-        term.k = value['k']
         term.save()
         VectorIndex._add_occurrences(term, value)
+        VectorIndex._add_correlations(term, value)
 
     @staticmethod
     def create(data):
         bulk = []
         for term in data:
-            bulk.append(Term.objects.create(name=term['key'], k=term['value']['k']))
+            bulk.append(Term.objects.create(name=term['key']))
         Term.objects.bulk_create(bulk)
         for i in range(len(data)):
             VectorIndex._add_occurrences(bulk[i], data[i]['value'])
+            VectorIndex._add_correlations(bulk[i], data[i]['value'])
 
     @staticmethod
     def delete(key):
@@ -49,11 +57,14 @@ class VectorIndex:
             return json.dumps({
                 'success': True,
                 'value': {
-                    'k': term.k,
                     'occurrences': [{
                         'document': occurrence.document,
                         'weight': occurrence.weight
-                    } for occurrence in term.occurrence_set]
+                    } for occurrence in term.occurrence_set],
+                    'correlations': [{
+                        'term': correlation.term2,
+                        'k': correlation.k
+                    } for correlation in term.correlation_set]
                 }
             })
         except Term.DoesNotExist:
@@ -64,28 +75,20 @@ class VectorIndex:
     @staticmethod
     def update(key, value):
         term = Term.objects.get(name=key)
-        term.k = value['k']
         term.save()
         term.occurrence_set.all().delete()
+        term.correlation_set_term1.all().delete()
+        term.correlation_set_term2.all().delete()
         VectorIndex._add_occurrences(term, value)
 
 
 class TCPHandler(socketserver.BaseRequestHandler):
-    def __init__(self, *args, **kwargs):
-        self.index = None
-        super().__init__(*args, **kwargs)
-
     def handle(self):
         data = receive_string(self.request)
         request = json.loads(data)
 
         if request['action'] == 'create':
             VectorIndex.create(request['data'])
-        elif not self.index:
-            self.request.sendall(json.dumps({
-                'action': 'error',
-                'message': 'Uninitialized index. Please request a "create" action before any other operation.'
-            }).encode())
         elif request['action'] == 'add':
             VectorIndex.add(request['key'], request['value'])
         elif request['action'] == 'update':
