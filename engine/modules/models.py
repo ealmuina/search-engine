@@ -2,6 +2,8 @@ import argparse
 from bisect import bisect_left
 from functools import reduce
 import json
+from pathlib import Path
+import socket
 import socketserver
 
 import numpy as np
@@ -9,9 +11,25 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-class _Model:
+def _analyzer(document):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        # Connect to text module server and send request
+        sock.connect((NETWORK['text']['host'], NETWORK['text']['port']))
+        sock.sendall(json.dumps({
+            'action': 'process',
+            'data': document.read()
+        }).encode())
+
+        response = sock.recv(1024).decode()
+        return response['terms']
+
+
+class _VectorBasedModel:
     def __init__(self):
-        pass
+        self.w = None
+        self.terms = None
+        self.term_count = 0
+        self.doc_count = 0
 
     def _similarity(self, j, q):
         raise NotImplementedError('This method has to be implemented by inheritors')
@@ -44,14 +62,14 @@ class _Model:
         return json.dumps(result)
 
 
-class Vector(_Model):
-    def __init__(self, d):
+class Vector(_VectorBasedModel):
+    def __init__(self):
         super().__init__()
-        vectorizer = TfidfVectorizer()
-        self.w = vectorizer.fit_transform(d).transpose()
-        self.terms = vectorizer.get_feature_names()
-        self.term_count = self.w.shape[0]
-        self.doc_count = self.w.shape[1]
+        # vectorizer = TfidfVectorizer()
+        # self.w = vectorizer.fit_transform(d).transpose()
+        # self.terms = vectorizer.get_feature_names()
+        # self.term_count = self.w.shape[0]
+        # self.doc_count = self.w.shape[1]
 
     def _similarity(self, j, q):
         vectorizer = TfidfVectorizer(vocabulary=self.terms)
@@ -65,16 +83,12 @@ class Vector(_Model):
         pass
 
 
-class GeneralizedVector(_Model):
-    def __init__(self, d):
+class GeneralizedVector(_VectorBasedModel):
+    def __init__(self):
         super().__init__()
-        vectorizer = TfidfVectorizer()
-        self.w = vectorizer.fit_transform(d).transpose()
-        self.terms = vectorizer.get_feature_names()
-        self.term_count = self.w.shape[0]
-        self.doc_count = self.w.shape[1]
+        self.k = None
 
-        # Calculate minterms
+    def _calculate_k(self):
         minterms = []
         for j in range(self.doc_count):
             m = 0
@@ -91,14 +105,16 @@ class GeneralizedVector(_Model):
                 c[i, r] += self.w[i, j]
 
         # Calculate the index term vectors as linear combinations of minterm vectors
-        self.k = np.zeros((self.term_count, self.term_count))
+        k = np.zeros((self.term_count, self.term_count))
         for i in range(self.term_count):
             num = reduce(
                 lambda acum, r: acum + np.array([c[i, r] if 2 ** l & m[r] else 0 for l in range(self.term_count)]),
                 range(len(m)),
                 np.zeros(self.term_count)
             )
-            self.k[i] = num / np.linalg.norm(num)
+            k[i] = num / np.linalg.norm(num)
+
+        return k
 
     def _similarity(self, j, q):
         vectorizer = TfidfVectorizer(vocabulary=self.terms)
@@ -113,12 +129,41 @@ class GeneralizedVector(_Model):
         return cosine_similarity(q.reshape(1, -1), d.reshape(1, -1))[0, 0]
 
     def build(self, path):
-        pass
+        vectorizer = TfidfVectorizer(input='file', analyzer=_analyzer)
+
+        documents = []
+        for document in Path(path).iterdir():
+            documents.append(open(str(document)))
+
+        self.w = vectorizer.fit_transform(documents).transpose()
+        self.term_count = self.w.shape[0]
+        self.doc_count = self.w.shape[1]
+        self.k = self._calculate_k()
+        self.terms = vectorizer.get_feature_names()
+
+        index = []
+        for i in range(self.term_count):
+            entry = {"key": self.terms[i]}
+            value = {'id': i, 'k': self.k[i], 'documents': []}
+            for j in range(self.doc_count):
+                if self.w[i, j]:
+                    # noinspection PyTypeChecker
+                    value['documents'].append({'document': j, 'weight': self.w[i, j]})
+            entry['value'] = value
+            index.append(entry)
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            # Connect to indices module server and send request
+            sock.connect((NETWORK['indices']['host'], NETWORK['indices']['port']))
+            sock.sendall(json.dumps({
+                'action': 'create',
+                'data': index
+            }).encode())
 
 
 class TCPHandler(socketserver.BaseRequestHandler):
     def __init__(self, *args, **kwargs):
-        self.model = None
+        self.model = MODEL()
         super().__init__(*args, **kwargs)
 
     def handle(self):
@@ -126,13 +171,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
         request = json.loads(data)
 
         if request['action'] == 'build':
-            self.model = MODEL()
             self.model.build(request['path'])
-        elif not self.model:
-            self.request.sendall(json.dumps({
-                'action': 'error',
-                'message': 'Uninitialized model. Please request a "build" action before any other operation.'
-            }).encode())
         elif request['action'] == 'query':
             self.request.sendall(self.model.query(request['query'], request['count']).encode())
         else:

@@ -4,8 +4,9 @@ import socketserver
 
 
 def process(data):
+    # TODO Do some actual work
     result = {
-        'terms': []
+        'terms': data.split()
     }
     return json.dumps(result)
 

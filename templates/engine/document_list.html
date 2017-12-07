@@ -1,5 +1,13 @@
-<ul>
-    {% for doc in documents %}
-        <li>{{ doc }}</li>
-    {% endfor %}
-</ul>
+{% if action == 'error' %}
+    {{ message }}
+{% else %}
+    {% if success %}
+        <ul>
+            {% for doc in documents %}
+                <li>{{ doc }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        Nothing was found.
+    {% endif %}
+{% endif %}

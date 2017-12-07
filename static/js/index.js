@@ -14,14 +14,16 @@ $(function () {
 
     $('form').submit(function (event) {
         event.preventDefault();
-
         var search_form = $('#search');
         var query = search_form.find('> form > input[type="search"]')[0].value;
-
         $.get('/search/', {'q': query}, function (data) {
             $('#results').html(data);
         });
-
         search_form.removeClass('open');
+    });
+
+    $('#build').click(function () {
+        path = '/media/eddy/Erato/Zchool/Computer Science/5º/IX Semestre/Sistemas de Información/PROYECTO. Modelo vectorial generalizado/Datasets/lisa/short/';
+        $.get('/build/', {'path': path})
     })
 });

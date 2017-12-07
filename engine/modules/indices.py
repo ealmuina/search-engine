@@ -1,6 +1,12 @@
 import argparse
 import json
+import os
 import socketserver
+
+import django
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'info_retrieval.settings')
+django.setup()
 
 from engine.models import Term, Occurrence
 

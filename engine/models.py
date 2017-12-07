@@ -6,7 +6,7 @@ class Document(models.Model):
 
 
 class Term(models.Model):
-    name = models.CharField(max_length=140)
+    name = models.CharField(unique=True, max_length=140)
     k = models.FloatField()
 
 

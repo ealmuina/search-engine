@@ -1,6 +1,12 @@
-from django.shortcuts import render
+from django.shortcuts import render, HttpResponse
 
 import engine.modules.ui as ui
+
+
+def build(request):
+    path = request.GET.get('path')
+    ui.build(path)
+    return HttpResponse()
 
 
 def index(request):
