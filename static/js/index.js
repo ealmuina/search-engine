@@ -23,6 +23,7 @@ $(function () {
     });
 
     $('#build').click(function () {
+        // TODO Add something to set path instead of hard-coding it
         path = '/media/eddy/Erato/Zchool/Computer Science/5º/IX Semestre/Sistemas de Información/PROYECTO. Modelo vectorial generalizado/Datasets/lisa/short/';
         $.get('/build/', {'path': path})
     })

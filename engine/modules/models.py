@@ -71,8 +71,6 @@ class Vector:
         return freq, terms
 
     def _similarity(self, j, q):
-        vectorizer = TfidfVectorizer(vocabulary=self.terms)
-        q = vectorizer.fit_transform([q]).transpose()
         return cosine_similarity(self.w[:, j].transpose(), q.transpose())[0, 0]
 
     def build(self, path):
@@ -96,6 +94,8 @@ class Vector:
         self.doc_count = self.w.shape[1]
 
     def query(self, q, count):
+        vectorizer = TfidfVectorizer(vocabulary=self.terms)
+        q = vectorizer.fit_transform([q]).transpose()
         similarities = list(map(lambda j: self._similarity(j, q), range(self.doc_count)))
         similarities = [(similarities[j], self.doc_names[j]) for j in range(len(similarities)) if similarities[j] > 0]
         similarities.sort(reverse=True)
