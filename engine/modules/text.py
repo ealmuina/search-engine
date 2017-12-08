@@ -1,6 +1,7 @@
 import argparse
 import json
 import socketserver
+import time
 
 from engine.modules.utils import receive_json
 
@@ -16,6 +17,7 @@ def process(data):
 class TCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         request = receive_json(self.request)
+        start = time.time()
 
         if request['action'] == 'process':
             self.request.sendall(process(request['data']).encode())
@@ -24,6 +26,8 @@ class TCPHandler(socketserver.BaseRequestHandler):
                 'action': 'error',
                 'message': 'Invalid action.'
             }).encode())
+
+        print('Processed action "%s" in %.2f seconds' % (request['action'], time.time() - start))
 
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 import pathlib
+import time
 
 from django.shortcuts import render, HttpResponse
 
@@ -32,10 +33,15 @@ def index(request):
 
 
 def search(request):
+    start = time.time()
     query = request.GET.get('q')
     count = 10
     response = ui.search(query, count)
     results = []
     if response['success']:
         results = [(Document.objects.get(filename=doc['document']), doc['match']) for doc in response['results']]
-    return render(request, 'engine/document_list.html', {'query': query, 'documents': results})
+    return render(request, 'engine/document_list.html', {
+        'query': query,
+        'documents': results,
+        'time': round(time.time() - start, 2)
+    })

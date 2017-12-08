@@ -5,12 +5,15 @@
         <h1>
             Results for: "{{ query }}"
         </h1>
-        <ul>
+        <p style="color: #808080">
+            Query performed in {{ time }} seconds
+        </p>
+        <ul style="list-style: none">
             {% for doc, match in documents %}
                 <li class="result">
-                    <p class="result-line"><a href="{{ doc.path }}">{{ doc.filename }}</a></p>
-                    <p class="result-line doc-title">{{ doc.title }}</p>
-                    <p class="result-line">{{ doc.content }}...</p>
+                    <p class="result-line"><a class="doc-title" href="{{ doc.path }}">{{ doc.title }}</a></p>
+                    <p class="result-line doc-name">{{ doc.filename }}</p>
+                    <p class="result-line doc-content">{{ doc.content }}...</p>
                 </li>
             {% endfor %}
         </ul>

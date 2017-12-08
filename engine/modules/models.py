@@ -4,6 +4,7 @@ from functools import reduce
 import json
 from pathlib import Path
 import socketserver
+import time
 
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
@@ -70,13 +71,9 @@ class Vector:
         return freq, terms
 
     def _similarity(self, j, q):
-        # TODO Check if it's OK
         vectorizer = TfidfVectorizer(vocabulary=self.terms)
         q = vectorizer.fit_transform([q]).transpose()
-        num = sum([self.w[i, j] * q[i] for i in range(self.term_count)])[0, 0]
-        den = np.math.sqrt(reduce(lambda x, y: x + y ** 2, self.w[:, j], 0)[0, 0]) * np.math.sqrt(
-            reduce(lambda x, y: x + y ** 2, q, 0)[0, 0])
-        return num / den
+        return cosine_similarity(self.w[:, j].transpose(), q.transpose())[0, 0]
 
     def build(self, path):
         self.path = path
@@ -176,6 +173,7 @@ class GeneralizedVector(Vector):
 class TCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         request = receive_json(self.request)
+        start = time.time()
 
         if request['action'] == 'build':
             MODEL.build(request['path'])
@@ -186,6 +184,8 @@ class TCPHandler(socketserver.BaseRequestHandler):
                 'action': 'error',
                 'message': 'Invalid action.'
             }).encode())
+
+        print('Processed action "%s" in %.2f seconds' % (request['action'], time.time() - start))
 
 
 def test():
@@ -208,7 +208,7 @@ def test():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('network')
-    parser.add_argument('--model', default='GeneralizedVector')
+    parser.add_argument('--model', default='Vector')
     args = parser.parse_args()
 
     MODEL = {
