@@ -73,3 +73,15 @@ body {
     padding: 10px 17px;
     font-size: 27px;
 }
+
+.result {
+    padding: 10px;
+}
+
+.result-line {
+    margin: 0;
+}
+
+.doc-title {
+    color: green;
+}

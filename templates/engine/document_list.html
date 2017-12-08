@@ -2,9 +2,16 @@
     {{ message }}
 {% else %}
     {% if documents %}
+        <h1>
+            Results for: "{{ query }}"
+        </h1>
         <ul>
             {% for doc, match in documents %}
-                <li>{{ doc }}</li>
+                <li class="result">
+                    <p class="result-line"><a href="{{ doc.path }}">{{ doc.filename }}</a></p>
+                    <p class="result-line doc-title">{{ doc.title }}</p>
+                    <p class="result-line">{{ doc.content }}...</p>
+                </li>
             {% endfor %}
         </ul>
     {% else %}
