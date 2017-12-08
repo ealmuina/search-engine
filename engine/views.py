@@ -16,4 +16,8 @@ def index(request):
 def search(request):
     query = request.GET.get('q')
     count = 10
-    return render(request, 'engine/document_list.html', ui.search(query, count))
+    response = ui.search(query, count)
+    results = []
+    if response['success']:
+        results = [(doc['document'], doc['match']) for doc in response['results']]
+    return render(request, 'engine/document_list.html', {'documents': results})

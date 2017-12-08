@@ -2,25 +2,20 @@ import argparse
 import json
 import socketserver
 
-from engine.modules.utils import receive_string
+from engine.modules.utils import receive_json
 
 
 def process(data):
     # TODO Do some actual work
     result = {
-        'terms': data.split()
+        'terms': data.lower().split()
     }
     return json.dumps(result)
 
 
 class TCPHandler(socketserver.BaseRequestHandler):
-    def __init__(self, *args, **kwargs):
-        self.index = None
-        super().__init__(*args, **kwargs)
-
     def handle(self):
-        data = receive_string(self.request)
-        request = json.loads(data)
+        request = receive_json(self.request)
 
         if request['action'] == 'process':
             self.request.sendall(process(request['data']).encode())

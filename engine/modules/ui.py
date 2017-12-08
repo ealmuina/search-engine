@@ -1,32 +1,18 @@
-import json
-import socket
-
 from django.conf import settings
 
-from engine.modules.utils import receive_string
+from engine.modules.utils import send_json
+
 
 def build(path):
-    send_to_models(json.dumps({
+    send_json({
         'action': 'build',
         'path': path
-    }))
+    }, settings.NETWORK['models']['host'], settings.NETWORK['models']['port'])
 
 
 def search(query, count):
-    response = send_to_models(json.dumps({
+    return send_json({
         'action': 'query',
         'query': query,
         'count': count
-    }), True)
-    return json.loads(response)
-
-
-def send_to_models(request, wait_response=False):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        # Connect to models module server and send request
-        sock.connect((settings.NETWORK['models']['host'], settings.NETWORK['models']['port']))
-        sock.sendall(request.encode())
-
-        if wait_response:
-            # Receive data from the server and shut down
-            return receive_string(sock)
+    }, settings.NETWORK['models']['host'], settings.NETWORK['models']['port'], True)

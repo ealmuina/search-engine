@@ -1,9 +1,9 @@
 {% if action == 'error' %}
     {{ message }}
 {% else %}
-    {% if success %}
+    {% if documents %}
         <ul>
-            {% for doc in documents %}
+            {% for doc, match in documents %}
                 <li>{{ doc }}</li>
             {% endfor %}
         </ul>

@@ -3,46 +3,104 @@ from bisect import bisect_left
 from functools import reduce
 import json
 from pathlib import Path
-import socket
 import socketserver
 
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from engine.modules.utils import receive_string
+from engine.modules.utils import send_json, receive_json
 
 
-def _analyzer(document):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        # Connect to text module server and send request
-        sock.connect((NETWORK['text']['host'], NETWORK['text']['port']))
-        sock.sendall(json.dumps({
-            'action': 'process',
-            'data': document.read()
-        }).encode())
-        sock.shutdown(socket.SHUT_WR)
-
-        response = receive_string(sock)
-        return json.loads(response)['terms']
+def _analyze(document):
+    response = send_json({
+        'action': 'process',
+        'data': document.read()
+    }, NETWORK['text']['host'], NETWORK['text']['port'], True)
+    return response['terms']
 
 
-class _VectorBasedModel:
+class Vector:
     def __init__(self):
+        self.path = ''
         self.w = None
         self.terms = None
         self.term_count = 0
         self.doc_count = 0
+        self.doc_names = None
+
+    def _build_index(self, freq, terms):
+        index = []
+        for i in range(freq.shape[0]):
+            documents = []
+            entry = {'key': terms[i], 'value': {'documents': documents}}
+            for j in range(freq.shape[1]):
+                if freq[i, j]:
+                    documents.append({'document': self.doc_names[j], 'freq': float(freq[i, j])})
+            index.append(entry)
+
+        send_json({
+            'action': 'create',
+            'data': index
+        }, NETWORK['indices']['host'], NETWORK['indices']['port'])
+
+    def _calculate_freq(self):
+        vectorizer = CountVectorizer(input='file', analyzer=_analyze)
+        documents = []
+        for doc in Path(self.path).iterdir():
+            if doc.name == 'index.json':
+                continue
+            documents.append(open(str(doc)))
+
+        freq = vectorizer.fit_transform(documents).transpose()
+        terms = vectorizer.get_feature_names()
+        return freq, terms
+
+    def _load_freq(self, index):
+        terms = sorted(list(index.keys()))
+        documents = [doc.name for doc in Path(self.path).iterdir() if doc.name != 'index.json']
+        freq = np.zeros((len(terms), len(documents)))
+
+        for t in terms:
+            i = bisect_left(terms, t)
+            for d in index[t]['documents']:
+                j = bisect_left(documents, d['document'])
+                freq[i, j] = d['freq']
+
+        return freq, terms
 
     def _similarity(self, j, q):
-        raise NotImplementedError('This method has to be implemented by inheritors')
+        # TODO Check if it's OK
+        vectorizer = TfidfVectorizer(vocabulary=self.terms)
+        q = vectorizer.fit_transform([q]).transpose()
+        num = sum([self.w[i, j] * q[i] for i in range(self.term_count)])[0, 0]
+        den = np.math.sqrt(reduce(lambda x, y: x + y ** 2, self.w[:, j], 0)[0, 0]) * np.math.sqrt(
+            reduce(lambda x, y: x + y ** 2, q, 0)[0, 0])
+        return num / den
 
     def build(self, path):
-        pass
+        self.path = path
+        self.doc_names = [doc.name for doc in Path(self.path).iterdir() if doc.name != 'index.json']
+
+        index = send_json({
+            'action': 'load',
+            'path': path
+        }, NETWORK['indices']['host'], NETWORK['indices']['port'], True)
+
+        if not index:
+            freq, terms = self._calculate_freq()
+            self._build_index(freq, terms)
+        else:
+            freq, terms = self._load_freq(index)
+
+        self.w = TfidfTransformer().fit_transform(freq)
+        self.terms = terms
+        self.term_count = self.w.shape[0]
+        self.doc_count = self.w.shape[1]
 
     def query(self, q, count):
         similarities = list(map(lambda j: self._similarity(j, q), range(self.doc_count)))
-        similarities = [(similarities[i], i) for i in range(len(similarities)) if similarities[i] > 0]
+        similarities = [(similarities[j], self.doc_names[j]) for j in range(len(similarities)) if similarities[j] > 0]
         similarities.sort(reverse=True)
         similarities = similarities[:count]
 
@@ -52,9 +110,9 @@ class _VectorBasedModel:
                 'success': True,
                 'results': [
                     {
-                        'document': index,
+                        'document': document,
                         'match': similarity
-                    } for similarity, index in similarities
+                    } for similarity, document in similarities
                 ]
             }
         else:
@@ -65,28 +123,7 @@ class _VectorBasedModel:
         return json.dumps(result)
 
 
-class Vector(_VectorBasedModel):
-    def __init__(self):
-        super().__init__()
-        # vectorizer = TfidfVectorizer()
-        # self.w = vectorizer.fit_transform(d).transpose()
-        # self.terms = vectorizer.get_feature_names()
-        # self.term_count = self.w.shape[0]
-        # self.doc_count = self.w.shape[1]
-
-    def _similarity(self, j, q):
-        vectorizer = TfidfVectorizer(vocabulary=self.terms)
-        q = vectorizer.fit_transform([q]).transpose()
-        num = sum([self.w[i, j] * q[i] for i in range(self.term_count)])[0, 0]
-        den = np.math.sqrt(reduce(lambda x, y: x + y ** 2, self.w[:, j], 0)[0, 0]) * np.math.sqrt(
-            reduce(lambda x, y: x + y ** 2, q, 0)[0, 0])
-        return num / den
-
-    def build(self, path):
-        pass
-
-
-class GeneralizedVector(_VectorBasedModel):
+class GeneralizedVector(Vector):
     def __init__(self):
         super().__init__()
         self.k = None
@@ -132,55 +169,18 @@ class GeneralizedVector(_VectorBasedModel):
         return cosine_similarity(q.reshape(1, -1), d.reshape(1, -1))[0, 0]
 
     def build(self, path):
-        vectorizer = TfidfVectorizer(input='file', analyzer=_analyzer)
-
-        documents = []
-        for document in Path(path).iterdir():
-            documents.append(open(str(document)))
-
-        self.w = vectorizer.fit_transform(documents).transpose()
-        self.term_count = self.w.shape[0]
-        self.doc_count = self.w.shape[1]
+        super().build(path)
         self.k = self._calculate_k()
-        self.terms = vectorizer.get_feature_names()
-
-        index = []
-        for i in range(self.term_count):
-            entry = {"key": self.terms[i]}
-            value = {'id': i, 'correlations': [], 'documents': []}
-            for ii in range(self.term_count):
-                if self.k[i, ii]:
-                    # noinspection PyTypeChecker
-                    value['correlations'].append({'term': ii, 'k': self.k[i, ii]})
-            for j in range(self.doc_count):
-                if self.w[i, j]:
-                    # noinspection PyTypeChecker
-                    value['documents'].append({'document': j, 'weight': self.w[i, j]})
-            entry['value'] = value
-            index.append(entry)
-
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # Connect to indices module server and send request
-            sock.connect((NETWORK['indices']['host'], NETWORK['indices']['port']))
-            sock.sendall(json.dumps({
-                'action': 'create',
-                'data': index
-            }).encode())
 
 
 class TCPHandler(socketserver.BaseRequestHandler):
-    def __init__(self, *args, **kwargs):
-        self.model = MODEL()
-        super().__init__(*args, **kwargs)
-
     def handle(self):
-        data = receive_string(self.request)
-        request = json.loads(data)
+        request = receive_json(self.request)
 
         if request['action'] == 'build':
-            self.model.build(request['path'])
+            MODEL.build(request['path'])
         elif request['action'] == 'query':
-            self.request.sendall(self.model.query(request['query'], request['count']).encode())
+            self.request.sendall(MODEL.query(request['query'], request['count']).encode())
         else:
             self.request.sendall(json.dumps({
                 'action': 'error',
@@ -214,7 +214,7 @@ if __name__ == '__main__':
     MODEL = {
         'Vector': Vector,
         'GeneralizedVector': GeneralizedVector
-    }[args.model]
+    }[args.model]()
     NETWORK = json.load(open(args.network))
 
     server = socketserver.TCPServer((NETWORK['models']['host'], NETWORK['models']['port']), TCPHandler)
