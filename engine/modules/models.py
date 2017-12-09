@@ -31,14 +31,16 @@ class Vector:
         self.doc_names = None
 
     def _build_index(self, freq, terms):
-        index = []
-        for i in range(freq.shape[0]):
-            documents = []
-            entry = {'key': terms[i], 'value': {'documents': documents}}
-            for j in range(freq.shape[1]):
-                if freq[i, j]:
-                    documents.append({'document': self.doc_names[j], 'freq': float(freq[i, j])})
-            index.append(entry)
+        index = [{'key': term, 'value': {'documents': []}} for term in terms]
+        freq = np.array(freq.todense())
+
+        it = np.nditer(freq, flags=['multi_index'])
+        while not it.finished:
+            f = int(it[0])
+            i, j = it.multi_index
+            if f:
+                index[i]['value']['documents'].append({'document': self.doc_names[j], 'freq': f})
+            it.iternext()
 
         send_json({
             'action': 'create',
@@ -71,7 +73,7 @@ class Vector:
         return freq, terms
 
     def _similarity(self, j, q):
-        return cosine_similarity(self.w[:, j].transpose(), q.transpose())[0, 0]
+        return cosine_similarity(j.reshape((1, -1)), q)[0, 0]
 
     def build(self, path):
         self.path = path
@@ -95,21 +97,22 @@ class Vector:
 
     def query(self, q, count):
         vectorizer = TfidfVectorizer(vocabulary=self.terms)
-        q = vectorizer.fit_transform([q]).transpose()
-        similarities = list(map(lambda j: self._similarity(j, q), range(self.doc_count)))
-        similarities = [(similarities[j], self.doc_names[j]) for j in range(len(similarities)) if similarities[j] > 0]
-        similarities.sort(reverse=True)
-        similarities = similarities[:count]
+        q = vectorizer.fit_transform([q])
+        w = np.array(self.w.todense())
 
-        if similarities:
+        similarities = np.apply_along_axis(lambda j: self._similarity(j, q), axis=0, arr=w).tolist()
+        documents = np.argsort(similarities)[-count:][::-1]
+        documents = [doc for doc in documents if similarities[doc] > 0]
+
+        if documents:
             result = {
                 'action': 'report',
                 'success': True,
                 'results': [
                     {
-                        'document': document,
-                        'match': similarity
-                    } for similarity, document in similarities
+                        'document': self.doc_names[doc],
+                        'match': similarities[doc]
+                    } for doc in documents
                 ]
             }
         else:

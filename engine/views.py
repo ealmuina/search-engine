@@ -1,3 +1,4 @@
+import os
 import pathlib
 import time
 
@@ -9,21 +10,27 @@ import engine.modules.ui as ui
 
 def build(request):
     path = request.GET.get('path')
-    bulk = []
-    for doc in pathlib.Path(path).iterdir():
-        if doc.name == 'index.json':
-            continue
-        with open(str(doc)) as file:
-            title = file.readline(140)
-            content = file.read(280)
-        bulk.append(Document(
-            path=str(doc),
-            filename=doc.name,
-            title=title,
-            content=content
-        ))
-    Document.objects.all().delete()
-    Document.objects.bulk_create(bulk)
+
+    path_docs = set(doc.name for doc in pathlib.Path(path).iterdir())
+    db_docs = set(doc.filename for doc in Document.objects.all())
+
+    if path_docs != db_docs:
+        bulk = []
+        for doc in pathlib.Path(path).iterdir():
+            if doc.name == 'index.json':
+                continue
+            with open(str(doc)) as file:
+                title = file.readline(140)
+                content = file.read(280)
+            bulk.append(Document(
+                path=str(doc),
+                filename=doc.name,
+                title=title,
+                content=content
+            ))
+        Document.objects.all().delete()
+        Document.objects.bulk_create(bulk)
+
     ui.build(path)
     return HttpResponse()
 
