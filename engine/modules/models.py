@@ -72,8 +72,11 @@ class Vector:
 
         return freq, terms
 
-    def _similarity(self, j, q):
-        return cosine_similarity(j.reshape((1, -1)), q)[0, 0]
+    def _get_similarities(self, q):
+        vectorizer = TfidfVectorizer(vocabulary=self.terms)
+        q = vectorizer.fit_transform([q])
+        similarities = cosine_similarity(q, self.w.transpose()).tolist()[0]
+        return similarities
 
     def build(self, path):
         self.path = path
@@ -96,11 +99,7 @@ class Vector:
         self.doc_count = self.w.shape[1]
 
     def query(self, q, count):
-        vectorizer = TfidfVectorizer(vocabulary=self.terms)
-        q = vectorizer.fit_transform([q])
-        w = np.array(self.w.todense())
-
-        similarities = np.apply_along_axis(lambda j: self._similarity(j, q), axis=0, arr=w).tolist()
+        similarities = self._get_similarities(q)
         documents = np.argsort(similarities)[-count:][::-1]
         documents = [doc for doc in documents if similarities[doc] > 0]
 
@@ -128,49 +127,53 @@ class GeneralizedVector(Vector):
         super().__init__()
         self.k = None
 
-    def _calculate_k(self):
+    def _calculate_wong_k(self):
+        w = np.array(self.w.todense()).tolist()
         minterms = []
         for j in range(self.doc_count):
             m = 0
             for i in range(self.term_count):
-                m += 2 ** i if self.w[i, j] else 0
+                m += 2 ** i if w[i][j] else 0
             minterms.append(m)
 
         # Calculate correlations
         m = sorted(list(set(minterms)))
-        c = np.zeros((self.term_count, len(m)))
+        c = np.zeros((self.term_count, len(m))).tolist()
         for i in range(self.term_count):
             for j in range(self.doc_count):
                 r = bisect_left(m, minterms[j])
-                c[i, r] += self.w[i, j]
+                c[i][r] += w[i][j]
 
         # Calculate the index term vectors as linear combinations of minterm vectors
-        k = np.zeros((self.term_count, self.term_count))
+        k = []
         for i in range(self.term_count):
             num = reduce(
-                lambda acum, r: acum + np.array([c[i, r] if 2 ** l & m[r] else 0 for l in range(self.term_count)]),
+                lambda acum, r: acum + np.array([c[i][r] if 2 ** l & m[r] else 0 for l in range(self.term_count)]),
                 range(len(m)),
                 np.zeros(self.term_count)
             )
-            k[i] = num / np.linalg.norm(num)
+            k.append(num / np.linalg.norm(num))
 
-        return k
+        return np.array(k)
 
-    def _similarity(self, j, q):
+    def _calculate_pearson_k(self):
+        w = np.array(self.w.todense())
+        k = np.corrcoef(w)
+        return np.abs(k)
+
+    def _get_similarities(self, q):
         vectorizer = TfidfVectorizer(vocabulary=self.terms)
-        w = vectorizer.fit_transform([q]).transpose()
-        q = reduce(
-            lambda acum, i: acum + w[i, 0] * self.k[i],
-            range(self.term_count),
-            np.zeros(self.term_count)
-        )
-        d = reduce(lambda acum, i: acum + self.w[i, j] * self.k[i], range(self.term_count), np.zeros(self.term_count))
+        q = vectorizer.fit_transform([q])
 
-        return cosine_similarity(q.reshape(1, -1), d.reshape(1, -1))[0, 0]
+        q = q.dot(self.k)
+        d = self.w.transpose().dot(self.k)
+
+        similarities = cosine_similarity(q, d).tolist()[0]
+        return similarities
 
     def build(self, path):
         super().build(path)
-        self.k = self._calculate_k()
+        self.k = self._calculate_pearson_k()
 
 
 class TCPHandler(socketserver.BaseRequestHandler):
@@ -211,7 +214,7 @@ def test():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('network')
-    parser.add_argument('--model', default='Vector')
+    parser.add_argument('--model', default='GeneralizedVector')
     args = parser.parse_args()
 
     MODEL = {
