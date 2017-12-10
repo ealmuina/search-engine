@@ -24,6 +24,8 @@ urlpatterns = [
     path('', engine.views.index),
     path('index/', engine.views.index),
 
+    path('init/', engine.views.init),
+    path('get_model/', engine.views.get_model),
     path('build/', engine.views.build),
     path('search/', engine.views.search),
 ]

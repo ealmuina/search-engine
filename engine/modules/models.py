@@ -1,10 +1,10 @@
 import argparse
-from bisect import bisect_left
-from functools import reduce
 import json
-from pathlib import Path
 import socketserver
 import time
+from bisect import bisect_left
+from functools import reduce
+from pathlib import Path
 
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
@@ -178,10 +178,26 @@ class GeneralizedVector(Vector):
 
 class TCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
+        global MODEL, ACTIVE_MODEL
         request = receive_json(self.request)
         start = time.time()
 
-        if request['action'] == 'build':
+        if request['action'] == 'init':
+            model = request['model']
+            if model in MODELS:
+                ACTIVE_MODEL = request['model']
+                MODEL = MODELS[ACTIVE_MODEL]()
+            else:
+                self.request.sendall(json.dumps({
+                    'action': 'error',
+                    'message': 'Incorrect model selected.'
+                }).encode())
+        elif request['action'] == 'get_model':
+            self.request.sendall(json.dumps({
+                'action': 'report',
+                'model': ACTIVE_MODEL
+            }).encode())
+        elif request['action'] == 'build':
             MODEL.build(request['path'])
         elif request['action'] == 'query':
             self.request.sendall(MODEL.query(request['query'], request['count']).encode())
@@ -217,10 +233,12 @@ if __name__ == '__main__':
     parser.add_argument('--model', default='GeneralizedVector')
     args = parser.parse_args()
 
-    MODEL = {
+    ACTIVE_MODEL = args.model
+    MODELS = {
         'Vector': Vector,
         'GeneralizedVector': GeneralizedVector
-    }[args.model]()
+    }
+    MODEL = MODELS[ACTIVE_MODEL]()
     NETWORK = json.load(open(args.network))
 
     server = socketserver.TCPServer((NETWORK['models']['host'], NETWORK['models']['port']), TCPHandler)

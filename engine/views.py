@@ -1,16 +1,14 @@
-import os
 import pathlib
 import time
 
 from django.shortcuts import render, HttpResponse
 
-from engine.models import Document
 import engine.modules.ui as ui
+from engine.models import Document
 
 
 def build(request):
     path = request.GET.get('path')
-
     path_docs = set(doc.name for doc in pathlib.Path(path).iterdir())
     db_docs = set(doc.filename for doc in Document.objects.all())
 
@@ -35,8 +33,19 @@ def build(request):
     return HttpResponse()
 
 
+def get_model(request):
+    response = ui.get_model()
+    return HttpResponse(response['model'])
+
+
 def index(request):
     return render(request, 'engine/index.html')
+
+
+def init(request):
+    model = request.GET.get('model')
+    ui.init(model)
+    return HttpResponse()
 
 
 def search(request):
