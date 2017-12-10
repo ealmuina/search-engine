@@ -13,12 +13,21 @@ from sklearn.metrics.pairwise import cosine_similarity
 from engine.modules.utils import send_json, receive_json
 
 
-def _analyze(document):
+def _analyze(text, is_query):
     response = send_json({
         'action': 'process',
-        'data': document.read()
+        'data': text,
+        'is_query': is_query
     }, NETWORK['text']['host'], NETWORK['text']['port'], True)
     return response['terms']
+
+
+def _analyse_query(query):
+    return _analyze(query, True)
+
+
+def _analyse_document(document):
+    return _analyze(document.read(), False)
 
 
 class Vector:
@@ -48,7 +57,7 @@ class Vector:
         }, NETWORK['indices']['host'], NETWORK['indices']['port'])
 
     def _calculate_freq(self):
-        vectorizer = CountVectorizer(input='file', analyzer=_analyze)
+        vectorizer = CountVectorizer(input='file', analyzer=_analyse_document)
         documents = []
         for doc in Path(self.path).iterdir():
             if doc.name == 'index.json':
@@ -73,7 +82,7 @@ class Vector:
         return freq, terms
 
     def _get_similarities(self, q):
-        vectorizer = TfidfVectorizer(vocabulary=self.terms)
+        vectorizer = TfidfVectorizer(vocabulary=self.terms, analyzer=_analyse_query)
         q = vectorizer.fit_transform([q])
         similarities = cosine_similarity(q, self.w.transpose()).tolist()[0]
         return similarities
@@ -162,7 +171,7 @@ class GeneralizedVector(Vector):
         return np.abs(k)
 
     def _get_similarities(self, q):
-        vectorizer = TfidfVectorizer(vocabulary=self.terms)
+        vectorizer = TfidfVectorizer(vocabulary=self.terms, analyzer=_analyse_query)
         q = vectorizer.fit_transform([q])
 
         q = q.dot(self.k)
@@ -208,23 +217,6 @@ class TCPHandler(socketserver.BaseRequestHandler):
             }).encode())
 
         print('Processed action "%s" in %.2f seconds' % (request['action'], time.time() - start))
-
-
-def test():
-    docs = [
-        'This is the first document.',
-        'This is the second second document.',
-        'And the third one.',
-        'Is this the first document?'
-    ]
-    gv = GeneralizedVector(docs)
-    v = Vector(docs)
-    q = 'third'
-    for j in range(4):
-        print(gv._similarity(j, q))
-    print()
-    for j in range(4):
-        print(v._similarity(j, q))
 
 
 if __name__ == '__main__':
