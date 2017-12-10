@@ -22,11 +22,11 @@ def _analyze(text, is_query):
     return response['terms']
 
 
-def _analyse_query(query):
+def _analyze_query(query):
     return _analyze(query, True)
 
 
-def _analyse_document(document):
+def _analyze_document(document):
     return _analyze(document.read(), False)
 
 
@@ -57,7 +57,7 @@ class Vector:
         }, NETWORK['indices']['host'], NETWORK['indices']['port'])
 
     def _calculate_freq(self):
-        vectorizer = CountVectorizer(input='file', analyzer=_analyse_document)
+        vectorizer = CountVectorizer(input='file', analyzer=_analyze_document)
         documents = []
         for doc in Path(self.path).iterdir():
             if doc.name == 'index.json':
@@ -82,7 +82,7 @@ class Vector:
         return freq, terms
 
     def _get_similarities(self, q):
-        vectorizer = TfidfVectorizer(vocabulary=self.terms, analyzer=_analyse_query)
+        vectorizer = TfidfVectorizer(vocabulary=self.terms, analyzer=_analyze_query)
         q = vectorizer.fit_transform([q])
         similarities = cosine_similarity(q, self.w.transpose()).tolist()[0]
         return similarities
@@ -171,7 +171,7 @@ class GeneralizedVector(Vector):
         return np.abs(k)
 
     def _get_similarities(self, q):
-        vectorizer = TfidfVectorizer(vocabulary=self.terms, analyzer=_analyse_query)
+        vectorizer = TfidfVectorizer(vocabulary=self.terms, analyzer=_analyze_query)
         q = vectorizer.fit_transform([q])
 
         q = q.dot(self.k)
