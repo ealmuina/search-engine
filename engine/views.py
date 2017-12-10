@@ -1,8 +1,11 @@
 import pathlib
 import time
+from bisect import bisect_left
 
+import numpy as np
 from django.shortcuts import render, HttpResponse
 
+import engine.evaluation as evaluation
 import engine.modules.ui as ui
 from engine.models import Document
 
@@ -33,6 +36,41 @@ def build(request):
     return HttpResponse()
 
 
+def evaluate(request):
+    return render(request, 'engine/evaluation.html', {'documents': Document.objects.all()})
+
+
+def get_evaluations(request):
+    collection = [doc.filename for doc in Document.objects.all()]
+    collection.sort()
+
+    relevant = request.GET.getlist('relevant[]')
+    count = int(request.GET.get('count'))
+    query = request.GET.get('query')
+    beta = float(request.GET.get('beta'))
+
+    response = ui.search(query, count)
+    retrieved = response.get('results', [])
+    retrieved = [doc['document'] for doc in retrieved]
+
+    retrieved = [bisect_left(collection, doc) for doc in retrieved]
+    rel = [False] * len(collection)
+    for doc in relevant:
+        j = bisect_left(collection, doc)
+        rel[j] = True
+
+    retrieved = np.array(retrieved)
+    relevant = np.array(rel)
+
+    return render(request, 'engine/evaluation_report.html', {
+        'precision': evaluation.precision(relevant, retrieved),
+        'recall': evaluation.recall(relevant, retrieved),
+        'f_measure': evaluation.f_measure(relevant, retrieved),
+        'e_measure': evaluation.e_measure(relevant, retrieved, beta),
+        'r_precision': evaluation.r_precision(relevant, retrieved)
+    })
+
+
 def get_model(request):
     response = ui.get_model()
     return HttpResponse(response['model'])
@@ -51,7 +89,7 @@ def init(request):
 def search(request):
     start = time.time()
     query = request.GET.get('q')
-    count = 10
+    count = int(request.GET.get('count'))
     response = ui.search(query, count)
     results = []
     if response['success']:

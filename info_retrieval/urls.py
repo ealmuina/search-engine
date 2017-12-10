@@ -22,10 +22,13 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     path('', engine.views.index),
-    path('index/', engine.views.index),
+    path('index/', engine.views.index, name='index'),
 
-    path('init/', engine.views.init),
-    path('get_model/', engine.views.get_model),
-    path('build/', engine.views.build),
-    path('search/', engine.views.search),
+    path('init/', engine.views.init, name='init'),
+    path('get_model/', engine.views.get_model, name='get_model'),
+    path('build/', engine.views.build, name='build'),
+    path('search/', engine.views.search, name='search'),
+
+    path('evaluate/', engine.views.evaluate, name='evaluate'),
+    path('get_evaluations/', engine.views.get_evaluations, name='get_evaluations')
 ]

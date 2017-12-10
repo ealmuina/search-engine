@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+
+{% extends 'engine/base.html' %}
+
+{% load staticfiles %}
+{% load listutil %}
+
+{% block content %}
+    <div id="content" class="text-justify">
+        <form>
+            <div>
+                <label>
+                    Type query here:
+                    <input type="text" id="query-box" style="width: 1020px">
+                </label>
+            </div>
+            <div>
+                <p>
+                    Pick relevant documents for the query:
+                </p>
+                <div class="row">
+                    {% for partition in documents|partition:"3" %}
+                        <div class="col-lg-4">
+                            {% for document in partition %}
+                                <label>
+                                    <input type="checkbox" id="checkbox-{{ document.id }}"
+                                           data-filename="{{ document.filename }}">
+                                    {{ document.filename|slice:":30" }}
+                                </label>
+                                <br>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <label>
+                Beta value for E-Measure: <input type="text" id="beta-value">
+            </label><br>
+            <label>
+                Number of documents to retrieve: <input type="number" id="count">
+            </label><br>
+            <button type="submit">Evaluate</button>
+        </form>
+
+        <div id="evaluation-results">
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'js/evaluation.js' %}"></script>
+    <script>
+        $().ready(function () {
+            $('#evaluate').addClass('active');
+        })
+    </script>
+{% endblock %}
