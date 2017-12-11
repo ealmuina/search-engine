@@ -13,6 +13,8 @@ STOPS = set(stopwords.words('english'))
 STEMMER = nltk.PorterStemmer()
 LEMMATIZER = nltk.WordNetLemmatizer()
 
+LEMMATIZER.lemmatize('word')  # just to warm it up
+
 
 def _expand_query(words):
     query = []
@@ -22,11 +24,11 @@ def _expand_query(words):
     return query
 
 
-def _get_synonyms(word, count=3):
+def _get_synonyms(word, count=5):
     syns = {word}
     for syn in wordnet.synsets(word):
         for lemma in syn.lemmas():
-            if len(syns) > count:
+            if len(syns) >= count:
                 break
             syns.add(lemma.name())
     return syns

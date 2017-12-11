@@ -70,13 +70,12 @@ class Vector:
 
     def _load_freq(self, index):
         terms = sorted(list(index.keys()))
-        documents = [doc.name for doc in Path(self.path).iterdir() if doc.name != 'index.json']
-        freq = np.zeros((len(terms), len(documents)))
+        freq = np.zeros((len(terms), len(self.doc_names)))
 
         for t in terms:
             i = bisect_left(terms, t)
             for d in index[t]['documents']:
-                j = bisect_left(documents, d['document'])
+                j = bisect_left(self.doc_names, d['document'])
                 freq[i, j] = d['freq']
 
         return freq, terms
@@ -90,6 +89,7 @@ class Vector:
     def build(self, path):
         self.path = path
         self.doc_names = [doc.name for doc in Path(self.path).iterdir() if doc.name != 'index.json']
+        self.doc_names.sort()
 
         index = send_json({
             'action': 'load',
