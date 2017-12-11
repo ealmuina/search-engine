@@ -108,6 +108,9 @@ class Vector:
         self.doc_count = self.w.shape[1]
 
     def query(self, q, count):
+        if count == -1:
+            count = self.doc_count
+
         similarities = self._get_similarities(q)
         documents = np.argsort(similarities)[-count:][::-1]
         documents = [doc for doc in documents if similarities[doc] > 0]

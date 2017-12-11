@@ -40,7 +40,7 @@ $(function () {
         event.preventDefault();
         var search_form = $('#search');
         var query = search_form.find('> form > input[type="text"]')[0].value;
-        $.get('/search/', {'q': query, 'count': 10}, function (data) {
+        $.get('/search/', {'q': query}, function (data) {
             $('#content').html(data);
         });
         search_form.removeClass('open');

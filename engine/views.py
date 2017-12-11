@@ -3,6 +3,7 @@ import time
 from bisect import bisect_left
 
 import numpy as np
+from django.core.paginator import Paginator
 from django.shortcuts import render, HttpResponse
 
 import engine.evaluation as evaluation
@@ -89,11 +90,17 @@ def init(request):
 def search(request):
     start = time.time()
     query = request.GET.get('q')
-    count = int(request.GET.get('count'))
+    count = int(request.GET.get('count', '-1'))
+    page = request.GET.get('page', 1)
+
     response = ui.search(query, count)
     results = []
     if response['success']:
         results = [(Document.objects.get(filename=doc['document']), doc['match']) for doc in response['results']]
+
+    paginator = Paginator(results, 10)
+    results = paginator.page(page)
+
     return render(request, 'engine/document_list.html', {
         'query': query,
         'documents': results,
