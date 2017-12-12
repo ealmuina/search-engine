@@ -6,7 +6,7 @@ from bisect import bisect_left
 
 import numpy as np
 from django.core.paginator import Paginator
-from django.shortcuts import render, redirect, HttpResponse
+from django.shortcuts import render, HttpResponse
 
 import engine.evaluation as evaluation
 import engine.modules.ui as ui
@@ -25,20 +25,41 @@ def build(request):
     if created:
         directory.save()
 
-    path_docs = set(doc.name for doc in pathlib.Path(path).iterdir())
+    # Get set of documents in path
+    path_docs = {}
+    for doc in pathlib.Path(path).iterdir():
+        if doc.name in utils.RESERVED_FILES:
+            continue
+        if doc.name[:-4] == '.txt' and doc.name[:-4] in path_docs:
+            continue
+        path_docs[doc.name[:-4]] = doc.name
+
+    path_docs = set(path_docs.values())
     db_docs = set(doc.filename for doc in directory.document_set.only('filename'))
 
     if path_docs != db_docs:
         bulk = []
+        generated_docs = set()
+
         for doc in pathlib.Path(path).iterdir():
-            if doc.name in utils.RESERVED_FILES:
+            doc_path = str(doc)
+
+            if doc.name.endswith('.pdf'):
+                utils.fix_pdf(str(doc))
+                doc_path = str(doc)[:-4] + '.txt'
+                generated_docs.add(doc_path[:-4])
+
+            elif not doc.name.endswith('.txt') or doc_path[:-4] in generated_docs:
                 continue
-            with open(str(doc)) as file:
+
+            with open(doc_path) as file:
                 title = file.readline(140)
                 content = file.read(280)
+
             bulk.append(Document(
                 directory=directory,
-                filename=doc.name,
+                filename='.'.join(doc.name.split('.')[:-1]),
+                extension='.' + doc.name.split('.')[-1],
                 title=title,
                 content=content
             ))
@@ -152,5 +173,8 @@ def visit(request, document):
     doc.save()
 
     ui.fit_suggestions(token, document)
-    path = pathlib.Path(CURRENT_DIR.path)
-    return redirect(os.path.join(str(path.absolute()), document))  # TODO Find out how to return file
+    with open(os.path.join(doc.path), 'rb') as file:
+        response = HttpResponse(content=file)
+        response['Content-Type'] = 'application/%s' % doc.extension[1:]
+        response['Content-Disposition'] = 'filename="%s"' % (doc.filename + doc.extension)
+        return response

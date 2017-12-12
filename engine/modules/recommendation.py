@@ -10,13 +10,16 @@ from pathlib import Path
 
 import numpy as np
 
-import engine.modules.utils as utils
+from engine.modules.utils import send_json, receive_json
 
 
 class Adviser:
     def __init__(self, path):
         self.path = path
-        self.doc_names = [doc.name for doc in Path(self.path).iterdir() if doc.name not in utils.RESERVED_FILES]
+        self.doc_names = [
+            '.'.join(doc.name.split('.')[:-1])
+            for doc in Path(self.path).iterdir() if doc.name.endswith('.txt')
+        ]
         self.doc_names.sort()
         self.doc_count = len(self.doc_names)
         self.w = self._load_w()
@@ -25,7 +28,7 @@ class Adviser:
 
     def _build_k(self):
         while True:
-            index = utils.send_json({
+            index = send_json({
                 'action': 'load',
                 'path': self.path
             }, NETWORK['indices']['host'], NETWORK['indices']['port'], True)
@@ -105,7 +108,7 @@ class Adviser:
 class TCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         global ADVISER
-        request = utils.receive_json(self.request)
+        request = receive_json(self.request)
         start = time.time()
 
         if request['action'] == 'build':

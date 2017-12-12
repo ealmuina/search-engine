@@ -111,5 +111,5 @@ if __name__ == '__main__':
 
     evaluator = Evaluator(args.query_file, args.rel_file)
     print('precision - recall - f_measure - e_measure(beta=0.5) - e_measure(beta=1.5) - r_precision')
-    for i in range(10, 110, 10):
+    for i in range(5, 110, 10):
         print('Count %d:\t%s' % (i, str(evaluator.evaluate(i))))

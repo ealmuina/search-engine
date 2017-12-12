@@ -17,7 +17,7 @@
                         <p class="result-line">
                             <a class="doc-title" href="{% url 'visit' doc.filename %}">{{ doc.title }}</a>
                         </p>
-                        <p class="result-line doc-name">{{ doc.filename }}</p>
+                        <p class="result-line doc-name">{{ doc.filename }}{{ doc.extension }}</p>
                         <p class="result-line doc-content">{{ doc.content }}...</p>
                     </li>
                 {% endfor %}

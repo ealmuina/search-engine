@@ -1,9 +1,17 @@
 import json
+import os
 import socket
+import subprocess
 
 RESERVED_FILES = {
     'index.json', 'suggestions.bin'
 }
+
+
+def fix_pdf(path):
+    name = os.path.basename(path)
+    if not os.path.exists(name[:-4] + '.txt'):
+        subprocess.run(['pdftotext', path])
 
 
 def receive_json(sock):

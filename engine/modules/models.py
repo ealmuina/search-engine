@@ -10,11 +10,11 @@ import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-import engine.modules.utils as utils
+from engine.modules.utils import send_json, receive_json
 
 
 def _analyze(text, is_query):
-    response = utils.send_json({
+    response = send_json({
         'action': 'process',
         'data': text,
         'is_query': is_query
@@ -52,7 +52,7 @@ class Vector:
                 index[i]['value']['documents'].append({'document': self.doc_names[j], 'freq': f})
             it.iternext()
 
-        utils.send_json({
+        send_json({
             'action': 'create',
             'data': index
         }, NETWORK['indices']['host'], NETWORK['indices']['port'])
@@ -61,7 +61,7 @@ class Vector:
         vectorizer = CountVectorizer(input='file', analyzer=_analyze_document)
         documents = []
         for doc in Path(self.path).iterdir():
-            if doc.name == 'index.json':
+            if not doc.name.endswith('txt'):
                 continue
             documents.append(open(str(doc)))
 
@@ -89,10 +89,13 @@ class Vector:
 
     def build(self, path):
         self.path = path
-        self.doc_names = [doc.name for doc in Path(self.path).iterdir() if doc.name not in utils.RESERVED_FILES]
+        self.doc_names = [
+            '.'.join(doc.name.split('.')[:-1])
+            for doc in Path(self.path).iterdir() if doc.name.endswith('.txt')
+        ]
         self.doc_names.sort()
 
-        index = utils.send_json({
+        index = send_json({
             'action': 'load',
             'path': path
         }, NETWORK['indices']['host'], NETWORK['indices']['port'], True)
@@ -192,7 +195,7 @@ class GeneralizedVector(Vector):
 class TCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         global MODEL, ACTIVE_MODEL
-        request = utils.receive_json(self.request)
+        request = receive_json(self.request)
         start = time.time()
 
         if request['action'] == 'set_model':
