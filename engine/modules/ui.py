@@ -4,16 +4,33 @@ from engine.modules.utils import send_json
 
 
 def build(path):
-    send_json({
+    dic = {
         'action': 'build',
         'path': path
-    }, settings.NETWORK['models']['host'], settings.NETWORK['models']['port'])
+    }
+    send_json(dic, settings.NETWORK['models']['host'], settings.NETWORK['models']['port'])
+    send_json(dic, settings.NETWORK['recommendation']['host'], settings.NETWORK['recommendation']['port'])
+
+
+def fit_suggestions(token, document):
+    send_json({
+        'action': 'fit',
+        'token': token,
+        'document': document
+    }, settings.NETWORK['recommendation']['host'], settings.NETWORK['recommendation']['port'])
 
 
 def get_model():
     return send_json({
         'action': 'get_model'
     }, settings.NETWORK['models']['host'], settings.NETWORK['models']['port'], True)
+
+
+def get_suggestions(token):
+    return send_json({
+        'action': 'suggest',
+        'token': token
+    }, settings.NETWORK['recommendation']['host'], settings.NETWORK['recommendation']['port'], True)
 
 
 def init(model):

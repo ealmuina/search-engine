@@ -1,6 +1,10 @@
 import json
 import socket
 
+RESERVED_FILES = {
+    'index.json', 'suggestions.bin'
+}
+
 
 def receive_json(sock):
     result = ''

@@ -30,5 +30,8 @@ urlpatterns = [
     path('search/', engine.views.search, name='search'),
 
     path('evaluate/', engine.views.evaluate, name='evaluate'),
-    path('get_evaluations/', engine.views.get_evaluations, name='get_evaluations')
+    path('get_evaluations/', engine.views.get_evaluations, name='get_evaluations'),
+
+    path('visit/<str:document>', engine.views.visit, name='visit'),
+    path('suggest/', engine.views.suggest, name='suggest'),
 ]

@@ -15,6 +15,7 @@ class Document(models.Model):
     filename = models.CharField(max_length=140)
     title = models.CharField(max_length=140)
     content = models.TextField(max_length=280)
+    visits = models.PositiveIntegerField(default=0)
 
     class Meta:
         unique_together = ('directory', 'filename')

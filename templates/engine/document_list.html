@@ -14,7 +14,9 @@
             <ul style="list-style: none; padding: 0">
                 {% for doc, match in documents %}
                     <li class="result">
-                        <p class="result-line"><a class="doc-title" href="{{ doc.path }}">{{ doc.title }}</a></p>
+                        <p class="result-line">
+                            <a class="doc-title" href="{% url 'visit' doc.filename %}">{{ doc.title }}</a>
+                        </p>
                         <p class="result-line doc-name">{{ doc.filename }}</p>
                         <p class="result-line doc-content">{{ doc.content }}...</p>
                     </li>

@@ -1,13 +1,16 @@
+import os
 import pathlib
+import random
 import time
 from bisect import bisect_left
 
 import numpy as np
 from django.core.paginator import Paginator
-from django.shortcuts import render, HttpResponse
+from django.shortcuts import render, redirect, HttpResponse
 
 import engine.evaluation as evaluation
 import engine.modules.ui as ui
+import engine.modules.utils as utils
 from engine.models import Document, Directory
 
 CURRENT_DIR = None
@@ -28,7 +31,7 @@ def build(request):
     if path_docs != db_docs:
         bulk = []
         for doc in pathlib.Path(path).iterdir():
-            if doc.name == 'index.json':
+            if doc.name in utils.RESERVED_FILES:
                 continue
             with open(str(doc)) as file:
                 title = file.readline(140)
@@ -119,3 +122,35 @@ def search(request):
         'documents': results,
         'time': round(time.time() - start, 2)
     })
+
+
+def suggest(request):
+    results = []
+    token = request.session.get('token')
+    if token:
+        response = ui.get_suggestions(token)
+
+        if response['success']:
+            try:
+                results = [(Document.objects.get(directory=CURRENT_DIR, filename=doc['document']), doc['usefulness'])
+                           for doc in response['results']]
+            except Document.DoesNotExist:
+                pass
+
+    return render(request, 'engine/recommendation_list.html', {
+        'documents': results
+    })
+
+
+def visit(request, document):
+    token = request.session.get('token', random.randint(1, 2 ** 64))
+    request.session['token'] = token
+    request.session.set_expiry(300)
+
+    doc = Document.objects.get(directory=CURRENT_DIR, filename=document)
+    doc.visits += 1
+    doc.save()
+
+    ui.fit_suggestions(token, document)
+    path = pathlib.Path(CURRENT_DIR.path)
+    return redirect(os.path.join(str(path.absolute()), document))  # TODO Find out how to return file

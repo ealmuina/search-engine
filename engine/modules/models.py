@@ -10,11 +10,11 @@ import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from engine.modules.utils import send_json, receive_json
+import engine.modules.utils as utils
 
 
 def _analyze(text, is_query):
-    response = send_json({
+    response = utils.send_json({
         'action': 'process',
         'data': text,
         'is_query': is_query
@@ -52,7 +52,7 @@ class Vector:
                 index[i]['value']['documents'].append({'document': self.doc_names[j], 'freq': f})
             it.iternext()
 
-        send_json({
+        utils.send_json({
             'action': 'create',
             'data': index
         }, NETWORK['indices']['host'], NETWORK['indices']['port'])
@@ -89,10 +89,10 @@ class Vector:
 
     def build(self, path):
         self.path = path
-        self.doc_names = [doc.name for doc in Path(self.path).iterdir() if doc.name != 'index.json']
+        self.doc_names = [doc.name for doc in Path(self.path).iterdir() if doc.name not in utils.RESERVED_FILES]
         self.doc_names.sort()
 
-        index = send_json({
+        index = utils.send_json({
             'action': 'load',
             'path': path
         }, NETWORK['indices']['host'], NETWORK['indices']['port'], True)
@@ -192,7 +192,7 @@ class GeneralizedVector(Vector):
 class TCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         global MODEL, ACTIVE_MODEL
-        request = receive_json(self.request)
+        request = utils.receive_json(self.request)
         start = time.time()
 
         if request['action'] == 'init':
