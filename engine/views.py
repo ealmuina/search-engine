@@ -96,12 +96,6 @@ def index(request):
     return render(request, 'engine/index.html', {'build_needed': not CURRENT_DIR})
 
 
-def init(request):
-    model = request.GET.get('model')
-    ui.init(model)
-    return HttpResponse()
-
-
 def search(request):
     start = time.time()
     query = request.GET.get('q')
@@ -122,6 +116,12 @@ def search(request):
         'documents': results,
         'time': round(time.time() - start, 2)
     })
+
+
+def set_model(request):
+    model = request.GET.get('model')
+    ui.set_model(model)
+    return HttpResponse()
 
 
 def suggest(request):

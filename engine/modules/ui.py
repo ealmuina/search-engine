@@ -33,9 +33,9 @@ def get_suggestions(token):
     }, settings.NETWORK['recommendation']['host'], settings.NETWORK['recommendation']['port'], True)
 
 
-def init(model):
+def set_model(model):
     send_json({
-        'action': 'init',
+        'action': 'set_model',
         'model': model
     }, settings.NETWORK['models']['host'], settings.NETWORK['models']['port'])
 

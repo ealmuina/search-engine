@@ -195,7 +195,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
         request = utils.receive_json(self.request)
         start = time.time()
 
-        if request['action'] == 'init':
+        if request['action'] == 'set_model':
             model = request['model']
             if model in MODELS:
                 ACTIVE_MODEL = request['model']

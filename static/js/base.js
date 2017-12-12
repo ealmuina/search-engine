@@ -25,7 +25,7 @@ $(function () {
     $('a[href="#model"]').on('click', function (event) {
         event.preventDefault();
         var model = $(this).data('model');
-        $.get('/init/', {'model': model});
+        $.get('/set_model/', {'model': model});
         $('a[href="#model"]').parent().removeClass('active');
         $(this).parent().addClass('active');
     });
