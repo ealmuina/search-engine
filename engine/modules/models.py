@@ -33,6 +33,7 @@ def _analyze_document(document):
 class Vector:
     def __init__(self):
         self.path = ''
+        self.freq = None
         self.w = None
         self.terms = None
         self.term_count = 0
@@ -102,6 +103,7 @@ class Vector:
         else:
             freq, terms = self._load_freq(index)
 
+        self.freq = freq
         self.w = TfidfTransformer().fit_transform(freq)
         self.terms = terms
         self.term_count = self.w.shape[0]
@@ -169,8 +171,7 @@ class GeneralizedVector(Vector):
         return np.array(k)
 
     def _calculate_pearson_k(self):
-        w = np.array(self.w.todense())
-        k = np.corrcoef(w)
+        k = np.corrcoef(self.freq)
         return np.abs(k)
 
     def _get_similarities(self, q):
@@ -225,7 +226,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('network')
-    parser.add_argument('--model', default='GeneralizedVector')
+    parser.add_argument('--model', default='Vector')
     args = parser.parse_args()
 
     ACTIVE_MODEL = args.model

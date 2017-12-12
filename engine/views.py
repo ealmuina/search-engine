@@ -8,13 +8,22 @@ from django.shortcuts import render, HttpResponse
 
 import engine.evaluation as evaluation
 import engine.modules.ui as ui
-from engine.models import Document
+from engine.models import Document, Directory
+
+CURRENT_DIR = None
 
 
 def build(request):
+    global CURRENT_DIR
     path = request.GET.get('path')
+
+    directory, created = Directory.objects.get_or_create(path=path)
+    CURRENT_DIR = directory
+    if created:
+        directory.save()
+
     path_docs = set(doc.name for doc in pathlib.Path(path).iterdir())
-    db_docs = set(doc.filename for doc in Document.objects.all())
+    db_docs = set(doc.filename for doc in directory.document_set.only('filename'))
 
     if path_docs != db_docs:
         bulk = []
@@ -25,12 +34,12 @@ def build(request):
                 title = file.readline(140)
                 content = file.read(280)
             bulk.append(Document(
-                path=str(doc),
+                directory=directory,
                 filename=doc.name,
                 title=title,
                 content=content
             ))
-        Document.objects.all().delete()
+        directory.document_set.all().delete()
         Document.objects.bulk_create(bulk)
 
     ui.build(path)
@@ -38,7 +47,10 @@ def build(request):
 
 
 def evaluate(request):
-    return render(request, 'engine/evaluation.html', {'documents': Document.objects.all()})
+    return render(request, 'engine/evaluation.html', {
+        'build_needed': not CURRENT_DIR,
+        'documents': Document.objects.all()
+    })
 
 
 def get_evaluations(request):
@@ -78,7 +90,7 @@ def get_model(request):
 
 
 def index(request):
-    return render(request, 'engine/index.html')
+    return render(request, 'engine/index.html', {'build_needed': not CURRENT_DIR})
 
 
 def init(request):
@@ -96,7 +108,8 @@ def search(request):
     response = ui.search(query, count)
     results = []
     if response['success']:
-        results = [(Document.objects.get(filename=doc['document']), doc['match']) for doc in response['results']]
+        results = [(Document.objects.get(directory=CURRENT_DIR, filename=doc['document']), doc['match'])
+                   for doc in response['results']]
 
     paginator = Paginator(results, 10)
     results = paginator.page(page)

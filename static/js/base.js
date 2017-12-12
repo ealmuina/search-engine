@@ -54,6 +54,7 @@ $(function () {
         var path = build_form.find('> form > input[type="text"]')[0].value;
         $.get('/build/', {'path': path});
         build_form.removeClass('open');
+        $('#build-alert').addClass('hidden');
     });
 
     $('a[href="#suggested"]').on('click', function (event) {
