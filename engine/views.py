@@ -25,16 +25,7 @@ def build(request):
     if created:
         directory.save()
 
-    # Get set of documents in path
-    path_docs = {}
-    for doc in pathlib.Path(path).iterdir():
-        if doc.name in utils.RESERVED_FILES:
-            continue
-        if doc.name[:-4] == '.txt' and doc.name[:-4] in path_docs:
-            continue
-        path_docs[doc.name[:-4]] = doc.name
-
-    path_docs = set(path_docs.values())
+    path_docs = utils.get_documents(path)
     db_docs = set(doc.filename for doc in directory.document_set.only('filename'))
 
     if path_docs != db_docs:
@@ -175,6 +166,6 @@ def visit(request, document):
     ui.fit_suggestions(token, document)
     with open(os.path.join(doc.path), 'rb') as file:
         response = HttpResponse(content=file)
-        response['Content-Type'] = 'application/%s' % doc.extension[1:]
-        response['Content-Disposition'] = 'filename="%s"' % (doc.filename + doc.extension)
+        if doc.extension != '.txt':
+            response['Content-Type'] = 'application/%s' % doc.extension[1:]
         return response

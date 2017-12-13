@@ -1,5 +1,6 @@
 import json
 import os
+import pathlib
 import socket
 import subprocess
 
@@ -12,6 +13,17 @@ def fix_pdf(path):
     name = os.path.basename(path)
     if not os.path.exists(name[:-4] + '.txt'):
         subprocess.run(['pdftotext', path])
+
+
+def get_documents(path):
+    path_docs = {}
+    for doc in pathlib.Path(path).iterdir():
+        if doc.name in RESERVED_FILES:
+            continue
+        if doc.name[:-4] == '.txt' and doc.name[:-4] in path_docs:
+            continue
+        path_docs[doc.name[:-4]] = doc.name
+    return set(path_docs.values())
 
 
 def receive_json(sock):
