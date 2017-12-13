@@ -5,8 +5,15 @@
 {% load staticfiles %}
 
 {% block content %}
-    <div id="content" class="text-justify">
-        Answers go here.
+    <div class="row">
+        <div id="content" class="col-lg-6 text-justify">
+            <div id="top-visited-content"></div>
+            {% if not build_needed %}
+                <h1>Most visited</h1>
+                {% include 'engine/document_list.html' with documents=top_documents %}
+            {% endif %}
+        </div>
+        <div id="suggested-content" class="col-lg-6"></div>
     </div>
 {% endblock %}
 

@@ -12,13 +12,11 @@ $(function () {
             relevant.push($(checked[i]).data('filename'));
         }
 
-        $.get('/get_evaluations/', {
+        $('#evaluation-results').load('/get_evaluations/', {
             'query': query,
             'count': count,
             'beta': beta,
             'relevant': relevant
-        }, function (data) {
-            $('#evaluation-results').html(data);
         });
     });
 });

@@ -40,9 +40,7 @@ $(function () {
         event.preventDefault();
         var search_form = $('#search');
         var query = search_form.find('> form > input[type="text"]')[0].value;
-        $.get('/search/', {'q': query}, function (data) {
-            $('#content').html(data);
-        });
+        $('#content').load('/search/', {'q': query});
         search_form.removeClass('open');
         $('#suggested').removeClass('active');
         $('#evaluate').removeClass('active');

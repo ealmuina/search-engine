@@ -105,7 +105,10 @@ def get_model(request):
 
 
 def index(request):
-    return render(request, 'engine/index.html', {'build_needed': not CURRENT_DIR})
+    top_documents = []
+    if CURRENT_DIR:
+        top_documents = Document.objects.filter(directory=CURRENT_DIR).order_by('visits')[:5]
+    return render(request, 'engine/index.html', {'build_needed': not CURRENT_DIR, 'top_documents': top_documents})
 
 
 def search(request):
@@ -117,13 +120,13 @@ def search(request):
     response = ui.search(query, count)
     results = []
     if response['success']:
-        results = [(Document.objects.get(directory=CURRENT_DIR, filename=doc['document']), doc['match'])
+        results = [Document.objects.get(directory=CURRENT_DIR, filename=doc['document'])
                    for doc in response['results']]
 
     paginator = Paginator(results, 10)
     results = paginator.page(page)
 
-    return render(request, 'engine/document_list.html', {
+    return render(request, 'engine/query_result.html', {
         'query': query,
         'documents': results,
         'time': round(time.time() - start, 2)
@@ -144,12 +147,12 @@ def suggest(request):
 
         if response['success']:
             try:
-                results = [(Document.objects.get(directory=CURRENT_DIR, filename=doc['document']), doc['usefulness'])
+                results = [Document.objects.get(directory=CURRENT_DIR, filename=doc['document'])
                            for doc in response['results']]
             except Document.DoesNotExist:
                 pass
 
-    return render(request, 'engine/recommendation_list.html', {
+    return render(request, 'engine/suggested_documents.html', {
         'documents': results
     })
 

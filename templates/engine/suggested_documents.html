@@ -1,0 +1,4 @@
+{% if documents %}
+    <h1>You might find interesting</h1>
+    {% include 'engine/document_list.html' with documents=documents %}
+{% endif %}
