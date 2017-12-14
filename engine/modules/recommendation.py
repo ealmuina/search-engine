@@ -112,7 +112,16 @@ class TCPHandler(socketserver.BaseRequestHandler):
         start = time.time()
 
         if request['action'] == 'build':
-            ADVISER = Adviser(request['path'])
+            success = True
+            # noinspection PyBroadException
+            try:
+                ADVISER = Adviser(request['path'])
+            except Exception:
+                success = False
+            self.request.sendall(json.dumps({
+                'action': 'report',
+                'success': success
+            }).encode())
         elif not ADVISER:
             self.request.sendall(json.dumps({
                 'action': 'error',

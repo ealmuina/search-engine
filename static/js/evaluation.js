@@ -1,5 +1,5 @@
 $(function () {
-    $('#content').find('> form').submit(function (event) {
+    $('#evaluation-content').find('> form').submit(function (event) {
         event.preventDefault();
 
         var query = $('#query-box')[0].value;
@@ -12,11 +12,13 @@ $(function () {
             relevant.push($(checked[i]).data('filename'));
         }
 
-        $('#evaluation-results').load('/get_evaluations/', {
+        $.get('/get_evaluations/', {
             'query': query,
             'count': count,
             'beta': beta,
             'relevant': relevant
+        }, function (data) {
+            $('#evaluation-results').html(data);
         });
     });
 });

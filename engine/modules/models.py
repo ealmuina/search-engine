@@ -214,7 +214,16 @@ class TCPHandler(socketserver.BaseRequestHandler):
                 'model': ACTIVE_MODEL
             }).encode())
         elif request['action'] == 'build':
-            MODEL.build(request['path'])
+            success = True
+            # noinspection PyBroadException
+            try:
+                MODEL.build(request['path'])
+            except Exception:
+                success = False
+            self.request.sendall(json.dumps({
+                'action': 'report',
+                'success': success
+            }).encode())
         elif request['action'] == 'query':
             self.request.sendall(MODEL.query(request['query'], request['count']).encode())
         else:

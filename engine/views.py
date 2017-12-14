@@ -18,53 +18,59 @@ CURRENT_DIR = None
 
 def build(request):
     global CURRENT_DIR
-    path = request.GET.get('path')
+    start = time.time()
+    # noinspection PyBroadException
+    try:
+        path = request.GET.get('path')
 
-    directory, created = Directory.objects.get_or_create(path=path)
-    CURRENT_DIR = directory
-    if created:
-        directory.save()
+        directory, created = Directory.objects.get_or_create(path=path)
+        CURRENT_DIR = directory
+        if created:
+            directory.save()
 
-    path_docs = utils.get_documents(path)
-    db_docs = set(doc.filename for doc in directory.document_set.only('filename'))
+        path_docs = utils.get_documents(path)
+        db_docs = set(doc.filename for doc in directory.document_set.only('filename'))
 
-    if path_docs != db_docs:
-        bulk = []
-        generated_docs = set()
+        if path_docs != db_docs:
+            bulk = []
+            generated_docs = set()
 
-        for doc in pathlib.Path(path).iterdir():
-            doc_path = str(doc)
+            for doc in pathlib.Path(path).iterdir():
+                doc_path = str(doc)
 
-            if doc.name.endswith('.pdf'):
-                utils.fix_pdf(str(doc))
-                doc_path = str(doc)[:-4] + '.txt'
-                generated_docs.add(doc_path[:-4])
+                if doc.name.endswith('.pdf'):
+                    utils.fix_pdf(str(doc))
+                    doc_path = str(doc)[:-4] + '.txt'
+                    generated_docs.add(doc_path[:-4])
 
-            elif not doc.name.endswith('.txt') or doc_path[:-4] in generated_docs:
-                continue
+                elif not doc.name.endswith('.txt') or doc_path[:-4] in generated_docs:
+                    continue
 
-            with open(doc_path) as file:
-                title = file.readline(140)
-                content = file.read(280)
+                with open(doc_path) as file:
+                    title = file.readline(140)
+                    content = file.read(280)
 
-            bulk.append(Document(
-                directory=directory,
-                filename='.'.join(doc.name.split('.')[:-1]),
-                extension='.' + doc.name.split('.')[-1],
-                title=title,
-                content=content
-            ))
-        directory.document_set.all().delete()
-        Document.objects.bulk_create(bulk)
+                bulk.append(Document(
+                    directory=directory,
+                    filename='.'.join(doc.name.split('.')[:-1]),
+                    extension='.' + doc.name.split('.')[-1],
+                    title=title,
+                    content=content
+                ))
+            directory.document_set.all().delete()
+            Document.objects.bulk_create(bulk)
 
-    ui.build(path)
-    return HttpResponse()
+        success = ui.build(path)
+    except Exception:
+        CURRENT_DIR = None
+        success = False
+    return HttpResponse(round(time.time() - start, 2) if success else -1)
 
 
 def evaluate(request):
     return render(request, 'engine/evaluation.html', {
         'build_needed': not CURRENT_DIR,
-        'documents': Document.objects.all()
+        'documents': Document.objects.filter(directory=CURRENT_DIR)
     })
 
 
@@ -107,7 +113,7 @@ def get_model(request):
 def index(request):
     top_documents = []
     if CURRENT_DIR:
-        top_documents = Document.objects.filter(directory=CURRENT_DIR).order_by('visits')[:5]
+        top_documents = Document.objects.filter(directory=CURRENT_DIR).order_by('-visits')[:5]
     return render(request, 'engine/index.html', {'build_needed': not CURRENT_DIR, 'top_documents': top_documents})
 
 

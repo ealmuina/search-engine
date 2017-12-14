@@ -40,7 +40,9 @@ $(function () {
         event.preventDefault();
         var search_form = $('#search');
         var query = search_form.find('> form > input[type="text"]')[0].value;
-        $('#content').load('/search/', {'q': query});
+        $.get('/search/', {'q': query}, function (data) {
+            $('#content').html(data);
+        });
         search_form.removeClass('open');
         $('#suggested').removeClass('active');
         $('#evaluate').removeClass('active');
@@ -50,7 +52,16 @@ $(function () {
         event.preventDefault();
         var build_form = $('#build');
         var path = build_form.find('> form > input[type="text"]')[0].value;
-        $.get('/build/', {'path': path});
+        $.get('/build/', {'path': path}, function (data) {
+            var message = "";
+            if (data < 0)
+                message = '<strong>An error occurred during building.</strong> ' +
+                    'It might have been due misspellings in the path, please check it... ' +
+                    'Otherwise contact with system admin.';
+            else
+                message = 'System successfully built in <strong>' + data + '</strong> seconds.';
+            $('#content').html('<div class="alert alert-info" role="alert">' + message + '</div>');
+        });
         build_form.removeClass('open');
         $('#build-alert').addClass('hidden');
     });

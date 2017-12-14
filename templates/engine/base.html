@@ -23,7 +23,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="#">Document Finder</a>
+                <span class="navbar-brand">Document Finder</span>
             </div>
 
             <!-- Collect the nav links, forms, and other content for toggling -->
@@ -52,7 +52,9 @@
             <strong>Warning!</strong> Please execute a <strong>BUILD</strong> action before doing anything else.
         </div>
     {% endif %}
-    {% block content %}{% endblock %}
+    <div id="content">
+        {% block content %}{% endblock %}
+    </div>
 </div>
 
 <div id="search" class="dialog">
@@ -65,7 +67,7 @@
 
 <div id="build" class="dialog">
     <button type="button" class="close">×</button>
-    <form method="get" action=".">
+    <form>
         <input type="text" value="" placeholder="type path here"/>
         <button type="submit" class="btn btn-primary">Build</button>
     </form>

@@ -6,8 +6,7 @@
 
 {% block content %}
     <div class="row">
-        <div id="content" class="col-lg-6 text-justify">
-            <div id="top-visited-content"></div>
+        <div id="top-visited-content" class="col-lg-6 text-justify">
             {% if not build_needed %}
                 <h1>Most visited</h1>
                 {% include 'engine/document_list.html' with documents=top_documents %}
@@ -19,9 +18,11 @@
 
 {% block scripts %}
     <script src="{% static 'js/index.js' %}"></script>
-    <script>
-        $().ready(function () {
-            $('#suggested').addClass('active');
-        })
-    </script>
+    {% if not build_needed %}
+        <script>
+            $().ready(function () {
+                $('#suggested').addClass('active');
+            })
+        </script>
+    {% endif %}
 {% endblock %}
