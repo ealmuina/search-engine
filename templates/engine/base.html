@@ -30,6 +30,7 @@
             <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
                 <ul class="nav navbar-nav">
                     <li id="suggested"><a href="{% url 'index' %}">SUGGESTED</a></li>
+                    <li id="summary"><a href="{% url 'summary' %}">SUMMARY</a></li>
                     <li><a href="#build">BUILD</a></li>
                     <li id="evaluate"><a href="{% url 'evaluate' %}">EVALUATE</a></li>
                     <li class="dropdown">
@@ -51,10 +52,11 @@
         <div id="build-alert" class="alert alert-danger" role="alert">
             <strong>Warning!</strong> Please execute a <strong>BUILD</strong> action before doing anything else.
         </div>
+    {% else %}
+        <div id="content">
+            {% block content %}{% endblock %}
+        </div>
     {% endif %}
-    <div id="content">
-        {% block content %}{% endblock %}
-    </div>
 </div>
 
 <div id="search" class="dialog">
@@ -77,6 +79,8 @@
 <script src="{% static 'js/bootstrap.min.js' %}"></script>
 <script src="{% static 'js/base.js' %}"></script>
 
-{% block scripts %}{% endblock %}
+{% if not build_needed %}
+    {% block scripts %}{% endblock %}
+{% endif %}
 </body>
 </html>

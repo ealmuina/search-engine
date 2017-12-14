@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
-from engine.modules.utils import send_json, receive_json
+import engine.modules.utils as utils
 
 
 class Adviser:
@@ -27,31 +27,22 @@ class Adviser:
         self.visits = {}
 
     def _build_k(self):
+        index = self._load_index()
+        freq, terms = utils.load_freq(index, self.doc_names)
+        freq = freq.transpose()
+        k = np.corrcoef(freq)
+        return np.abs(k)
+
+    def _load_index(self):
         while True:
-            index = send_json({
+            index = utils.send_json({
                 'action': 'load',
                 'path': self.path
             }, NETWORK['indices']['host'], NETWORK['indices']['port'], True)
             if index:
                 break
             time.sleep(random.randint(10, 60))  # Give some time so indices module can make it
-
-        freq, terms = self._load_freq(index)
-        freq = freq.transpose()
-        k = np.corrcoef(freq)
-        return np.abs(k)
-
-    def _load_freq(self, index):
-        terms = sorted(list(index.keys()))
-        freq = np.zeros((len(terms), len(self.doc_names)))
-
-        for t in terms:
-            i = bisect_left(terms, t)
-            for d in index[t]['documents']:
-                j = bisect_left(self.doc_names, d['document'])
-                freq[i, j] = d['freq']
-
-        return freq, terms
+        return index
 
     def _load_w(self):
         path = os.path.join(self.path, 'suggestions.bin')
@@ -108,7 +99,7 @@ class Adviser:
 class TCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         global ADVISER
-        request = receive_json(self.request)
+        request = utils.receive_json(self.request)
         start = time.time()
 
         if request['action'] == 'build':

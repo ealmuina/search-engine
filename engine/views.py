@@ -32,6 +32,7 @@ def build(request):
         db_docs = set(doc.filename for doc in directory.document_set.only('filename'))
 
         if path_docs != db_docs:
+            utils.remove_caches(path)
             bulk = []
             generated_docs = set()
 
@@ -161,6 +162,10 @@ def suggest(request):
     return render(request, 'engine/suggested_documents.html', {
         'documents': results
     })
+
+
+def summary(request):
+    return render(request, 'engine/summary.html')
 
 
 def visit(request, document):

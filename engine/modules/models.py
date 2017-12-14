@@ -10,11 +10,11 @@ import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from engine.modules.utils import send_json, receive_json
+import engine.modules.utils as utils
 
 
 def _analyze(text, is_query):
-    response = send_json({
+    response = utils.send_json({
         'action': 'process',
         'data': text,
         'is_query': is_query
@@ -52,7 +52,7 @@ class Vector:
                 index[i]['value']['documents'].append({'document': self.doc_names[j], 'freq': f})
             it.iternext()
 
-        send_json({
+        utils.send_json({
             'action': 'create',
             'data': index
         }, NETWORK['indices']['host'], NETWORK['indices']['port'])
@@ -69,18 +69,6 @@ class Vector:
         terms = vectorizer.get_feature_names()
         return freq, terms
 
-    def _load_freq(self, index):
-        terms = sorted(list(index.keys()))
-        freq = np.zeros((len(terms), len(self.doc_names)))
-
-        for t in terms:
-            i = bisect_left(terms, t)
-            for d in index[t]['documents']:
-                j = bisect_left(self.doc_names, d['document'])
-                freq[i, j] = d['freq']
-
-        return freq, terms
-
     def _get_similarities(self, q):
         vectorizer = TfidfVectorizer(vocabulary=self.terms, analyzer=_analyze_query)
         q = vectorizer.fit_transform([q])
@@ -95,7 +83,7 @@ class Vector:
         ]
         self.doc_names.sort()
 
-        index = send_json({
+        index = utils.send_json({
             'action': 'load',
             'path': path
         }, NETWORK['indices']['host'], NETWORK['indices']['port'], True)
@@ -104,7 +92,7 @@ class Vector:
             freq, terms = self._calculate_freq()
             self._build_index(freq, terms)
         else:
-            freq, terms = self._load_freq(index)
+            freq, terms = utils.load_freq(index, self.doc_names)
 
         self.freq = freq
         self.w = TfidfTransformer().fit_transform(freq)
@@ -144,6 +132,22 @@ class GeneralizedVector(Vector):
         super().__init__()
         self.k = None
 
+    @staticmethod
+    def sparse_corrcoef(A):
+        A = A.astype(np.float64)
+        n = A.shape[1]
+
+        # Compute the covariance matrix
+        rowsum = A.sum(1)
+        centering = rowsum.dot(rowsum.T.conjugate()) / n
+        C = (A.dot(A.T.conjugate()) - centering) / (n - 1)
+
+        # The correlation coefficients are given by
+        # C_{i,j} / sqrt(C_{i} * C_{j})
+        d = np.diag(C)
+        coeffs = C / np.sqrt(np.outer(d, d))
+        return coeffs
+
     def _calculate_wong_k(self):
         w = np.array(self.w.todense()).tolist()
         minterms = []
@@ -174,6 +178,7 @@ class GeneralizedVector(Vector):
         return np.array(k)
 
     def _calculate_pearson_k(self):
+        # TODO Use sparse_corrcoef instead
         k = np.corrcoef(self.freq)
         return np.abs(k)
 
@@ -195,7 +200,7 @@ class GeneralizedVector(Vector):
 class TCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         global MODEL, ACTIVE_MODEL
-        request = receive_json(self.request)
+        request = utils.receive_json(self.request)
         start = time.time()
 
         if request['action'] == 'set_model':

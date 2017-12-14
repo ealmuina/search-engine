@@ -8,10 +8,13 @@ def build(path):
         'action': 'build',
         'path': path
     }
-    suc1 = send_json(dic, settings.NETWORK['models']['host'], settings.NETWORK['models']['port'], True)['success']
-    suc2 = send_json(dic, settings.NETWORK['recommendation']['host'], settings.NETWORK['recommendation']['port'], True)[
-        'success']
-    return suc1 and suc2
+    success = {
+        send_json(dic, settings.NETWORK['models']['host'], settings.NETWORK['models']['port'], True)['success'],
+        send_json(dic, settings.NETWORK['recommendation']['host'], settings.NETWORK['recommendation']['port'], True)[
+            'success'],
+        send_json(dic, settings.NETWORK['summaries']['host'], settings.NETWORK['summaries']['port'], True)['success']
+    }
+    return False not in success
 
 
 def fit_suggestions(token, document):

@@ -34,4 +34,6 @@ urlpatterns = [
 
     path('visit/<str:document>', engine.views.visit, name='visit'),
     path('suggest/', engine.views.suggest, name='suggest'),
+
+    path('summary/', engine.views.summary, name='summary'),
 ]
