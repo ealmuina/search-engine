@@ -7,8 +7,11 @@ from functools import reduce
 from pathlib import Path
 
 import numpy as np
+from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import Normalizer
 
 import engine.modules.utils as utils
 
@@ -133,7 +136,7 @@ class GeneralizedVector(Vector):
         self.k = None
 
     @staticmethod
-    def sparse_corrcoef(A):
+    def _sparse_corrcoef(A):
         A = A.astype(np.float64)
         n = A.shape[1]
 
@@ -149,27 +152,35 @@ class GeneralizedVector(Vector):
         return coeffs
 
     def _calculate_wong_k(self):
-        w = np.array(self.w.todense()).tolist()
+        print('hola')
+
+        # Dimensionality reduction using LSA (latent semantic analysis)
+        svd = TruncatedSVD(n_components=min(self.term_count, 100))
+        normalizer = Normalizer(copy=False)
+        lsa = make_pipeline(svd, normalizer)
+        w = lsa.fit_transform(self.w.transpose()).transpose()
+        w = np.array(w.todense())
+
         minterms = []
         for j in range(self.doc_count):
             m = 0
             for i in range(self.term_count):
-                m += 2 ** i if w[i][j] else 0
+                m += 2 ** i if w[i, j] else 0
             minterms.append(m)
 
         # Calculate correlations
         m = sorted(list(set(minterms)))
-        c = np.zeros((self.term_count, len(m))).tolist()
+        c = np.zeros((self.term_count, len(m)))
         for i in range(self.term_count):
             for j in range(self.doc_count):
                 r = bisect_left(m, minterms[j])
-                c[i][r] += w[i][j]
+                c[i, r] += w[i, j]
 
         # Calculate the index term vectors as linear combinations of minterm vectors
         k = []
         for i in range(self.term_count):
             num = reduce(
-                lambda acum, r: acum + np.array([c[i][r] if 2 ** l & m[r] else 0 for l in range(self.term_count)]),
+                lambda acum, r: acum + np.array([c[i, r] if 2 ** l & m[r] else 0 for l in range(self.term_count)]),
                 range(len(m)),
                 np.zeros(self.term_count)
             )
@@ -178,8 +189,7 @@ class GeneralizedVector(Vector):
         return np.array(k)
 
     def _calculate_pearson_k(self):
-        # TODO Use sparse_corrcoef instead
-        k = np.corrcoef(self.freq)
+        k = self._sparse_corrcoef(self.freq)
         return np.abs(k)
 
     def _get_similarities(self, q):

@@ -92,10 +92,10 @@ class TCPHandler(socketserver.BaseRequestHandler):
         if request['action'] == 'build':
             success = True
             # noinspection PyBroadException
-            # try:
-            SUMMARY = Summary(request['path'])
-            # except Exception:
-            #     success = False
+            try:
+                SUMMARY = Summary(request['path'])
+            except Exception:
+                success = False
             self.request.sendall(json.dumps({
                 'action': 'report',
                 'success': success
