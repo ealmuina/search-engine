@@ -165,7 +165,15 @@ def suggest(request):
 
 
 def summary(request):
-    return render(request, 'engine/summary.html')
+    result = ui.get_summary()
+    result = [(
+        cluster['terms'],
+        Document.objects.filter(filename__in=cluster['documents'])
+    ) for cluster in result]
+    return render(request, 'engine/summary.html', {
+        'build_needed': not CURRENT_DIR,
+        'summary': result
+    })
 
 
 def visit(request, document):

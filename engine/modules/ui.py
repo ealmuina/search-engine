@@ -38,6 +38,12 @@ def get_suggestions(token):
     }, settings.NETWORK['recommendation']['host'], settings.NETWORK['recommendation']['port'], True)
 
 
+def get_summary():
+    return send_json({
+        'action': 'get'
+    }, settings.NETWORK['summaries']['host'], settings.NETWORK['summaries']['port'], True)
+
+
 def set_model(model):
     send_json({
         'action': 'set_model',

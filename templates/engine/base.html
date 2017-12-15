@@ -49,8 +49,10 @@
         </div><!-- /.container-fluid -->
     </nav>
     {% if build_needed %}
-        <div id="build-alert" class="alert alert-danger" role="alert">
-            <strong>Warning!</strong> Please execute a <strong>BUILD</strong> action before doing anything else.
+        <div id="notification">
+            <div id="build-alert" class="alert alert-danger" role="alert">
+                <strong>Warning!</strong> Please execute a <strong>BUILD</strong> action before doing anything else.
+            </div>
         </div>
     {% else %}
         <div id="content">

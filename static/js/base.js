@@ -60,10 +60,10 @@ $(function () {
                     'Otherwise contact with system admin.';
             else
                 message = 'System successfully built in <strong>' + data + '</strong> seconds.';
-            $('#content').html('<div class="alert alert-info" role="alert">' + message + '</div>');
+            $('#notification,#content').html('<div class="alert alert-info" role="alert">' + message + '</div>');
         });
+        $('.active').removeClass('active');
         build_form.removeClass('open');
-        $('#build-alert').addClass('hidden');
     });
 
     $('a[href="#suggested"]').on('click', function (event) {

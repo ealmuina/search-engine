@@ -3,22 +3,40 @@
 {% extends 'engine/base.html' %}
 
 {% load staticfiles %}
+{% load listutil %}
 
 {% block content %}
-    <div class="row">
-        <div id="top-visited-content" class="col-lg-6 text-justify">
-            <h1>Most visited</h1>
-            {% include 'engine/document_list.html' with documents=top_documents %}
-        </div>
-        <div id="suggested-content" class="col-lg-6"></div>
-    </div>
+    <h1>Groups of documents according to their topics</h1>
+    <ul style="list-style: none; padding: 0">
+        {% for terms, documents in summary %}
+            <div class="panel panel-default" style="margin-top: 20px">
+                <div class="panel-heading">
+                    <h3 class="panel-title">{{ terms }}</h3>
+                </div>
+                <div class="panel-body row">
+                    {% for partition in documents|partition:"3"|reverse %}
+                        <div class="col-lg-4">
+                            <ul>
+                                {% for doc in partition %}
+                                    <li>
+                                        <p><a href="{% url 'visit' doc.filename %}">
+                                            {{ doc.filename }}{{ doc.extension }}</a>
+                                        </p>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    </ul>
 {% endblock %}
 
 {% block scripts %}
-    <script src="{% static 'js/index.js' %}"></script>
     <script>
         $().ready(function () {
-            $('#suggested').addClass('active');
+            $('#summary').addClass('active');
         })
     </script>
 {% endblock %}

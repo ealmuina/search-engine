@@ -63,6 +63,8 @@ class Summary:
             # Do the actual clustering
             kmeans = MiniBatchKMeans(n_clusters=k)
             kmeans.fit(X)
+            kmeans.terms = terms
+            kmeans.freq = freq.transpose()
 
             with open(path, 'wb') as file:
                 pickle.dump(kmeans, file)
@@ -80,7 +82,19 @@ class Summary:
         return index
 
     def get(self):
-        pass
+        clusters = [[] for _ in range(self.kmeans.n_clusters)]
+        labels = self.kmeans.labels_
+        for i in range(len(labels)):
+            clusters[labels[i]].append(i)
+
+        terms = []
+        for i in range(self.kmeans.n_clusters):
+            freq = self.kmeans.freq[np.array(clusters[i])].sum(axis=0).argsort()[::-1]
+            terms.append([self.kmeans.terms[ind] for ind in freq[:10]])
+
+        return json.dumps([
+            {'terms': terms[i], 'documents': clusters[i]} for i in range(self.kmeans.n_clusters)
+        ])
 
 
 class TCPHandler(socketserver.BaseRequestHandler):

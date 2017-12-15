@@ -68,3 +68,8 @@ def partition_horizontal(thelist, n):
     for i, val in enumerate(thelist):
         newlists[i % n].append(val)
     return newlists
+
+
+@register.filter
+def reverse(thelist):
+    return reversed(thelist)
