@@ -69,7 +69,7 @@ class Evaluator:
             for line in rel_file:
                 line = line.split()
                 q = int(line[0]) - 1
-                doc = line[1] + '.txt'
+                doc = line[1]
                 relevant[q].append(doc)
         return relevant
 

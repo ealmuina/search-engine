@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import socketserver
 import time
 from bisect import bisect_left
@@ -7,11 +8,8 @@ from functools import reduce
 from pathlib import Path
 
 import numpy as np
-from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import Normalizer
 
 import engine.modules.utils as utils
 
@@ -63,10 +61,9 @@ class Vector:
     def _calculate_freq(self):
         vectorizer = CountVectorizer(input='file', analyzer=_analyze_document)
         documents = []
-        for doc in Path(self.path).iterdir():
-            if not doc.name.endswith('txt'):
-                continue
-            documents.append(open(str(doc)))
+        for doc in self.doc_names:
+            path = os.path.join(self.path, doc + '.txt')
+            documents.append(open(path))
 
         freq = vectorizer.fit_transform(documents).transpose()
         terms = vectorizer.get_feature_names()
@@ -152,35 +149,27 @@ class GeneralizedVector(Vector):
         return coeffs
 
     def _calculate_wong_k(self):
-        print('hola')
-
-        # Dimensionality reduction using LSA (latent semantic analysis)
-        svd = TruncatedSVD(n_components=min(self.term_count, 100))
-        normalizer = Normalizer(copy=False)
-        lsa = make_pipeline(svd, normalizer)
-        w = lsa.fit_transform(self.w.transpose()).transpose()
-        w = np.array(w.todense())
-
+        w = np.array(self.w.todense()).tolist()
         minterms = []
         for j in range(self.doc_count):
             m = 0
             for i in range(self.term_count):
-                m += 2 ** i if w[i, j] else 0
+                m += 2 ** i if w[i][j] else 0
             minterms.append(m)
 
         # Calculate correlations
         m = sorted(list(set(minterms)))
-        c = np.zeros((self.term_count, len(m)))
+        c = np.zeros((self.term_count, len(m))).tolist()
         for i in range(self.term_count):
             for j in range(self.doc_count):
                 r = bisect_left(m, minterms[j])
-                c[i, r] += w[i, j]
+                c[i][r] += w[i][j]
 
         # Calculate the index term vectors as linear combinations of minterm vectors
         k = []
         for i in range(self.term_count):
             num = reduce(
-                lambda acum, r: acum + np.array([c[i, r] if 2 ** l & m[r] else 0 for l in range(self.term_count)]),
+                lambda acum, r: acum + np.array([c[i][r] if 2 ** l & m[r] else 0 for l in range(self.term_count)]),
                 range(len(m)),
                 np.zeros(self.term_count)
             )
