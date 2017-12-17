@@ -28,6 +28,7 @@ urlpatterns = [
     path('get_model/', engine.views.get_model, name='get_model'),
     path('build/', engine.views.build, name='build'),
     path('search/', engine.views.search, name='search'),
+    path('update_search/', engine.views.update_search, name='update_search'),
 
     path('evaluate/', engine.views.evaluate, name='evaluate'),
     path('get_evaluations/', engine.views.get_evaluations, name='get_evaluations'),

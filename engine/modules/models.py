@@ -40,6 +40,7 @@ class Vector:
         self.term_count = 0
         self.doc_count = 0
         self.doc_names = None
+        self.last_query = {}  # last query answered for each session
 
     def _build_index(self, freq, terms):
         index = [{'key': term, 'value': {'documents': []}} for term in terms]
@@ -70,8 +71,6 @@ class Vector:
         return freq, terms
 
     def _get_similarities(self, q):
-        vectorizer = TfidfVectorizer(vocabulary=self.terms, analyzer=_analyze_query)
-        q = vectorizer.fit_transform([q])
         similarities = cosine_similarity(q, self.w.transpose()).tolist()[0]
         return similarities
 
@@ -100,10 +99,15 @@ class Vector:
         self.term_count = self.w.shape[0]
         self.doc_count = self.w.shape[1]
 
-    def query(self, q, count):
+    def query(self, token, q, count):
         if count == -1:
             count = self.doc_count
 
+        if isinstance(q, str):
+            vectorizer = TfidfVectorizer(vocabulary=self.terms, analyzer=_analyze_query)
+            q = vectorizer.fit_transform([q])
+
+        self.last_query[token] = q
         similarities = self._get_similarities(q)
         documents = np.argsort(similarities)[-count:][::-1]
         documents = [doc for doc in documents if similarities[doc] > 0]
@@ -126,27 +130,21 @@ class Vector:
             }
         return json.dumps(result)
 
+    def update_query(self, token, doc_name, positive, count):
+        q = self.last_query[token]
+        j = bisect_left(self.doc_names, doc_name)
+        d = self.w[:, j].transpose()
+        if positive:
+            q += d
+        else:
+            q -= 0.5 * d
+        return self.query(token, q, count)
+
 
 class GeneralizedVector(Vector):
     def __init__(self):
         super().__init__()
         self.k = None
-
-    @staticmethod
-    def _sparse_corrcoef(A):
-        A = A.astype(np.float64)
-        n = A.shape[1]
-
-        # Compute the covariance matrix
-        rowsum = A.sum(1)
-        centering = rowsum.dot(rowsum.T.conjugate()) / n
-        C = (A.dot(A.T.conjugate()) - centering) / (n - 1)
-
-        # The correlation coefficients are given by
-        # C_{i,j} / sqrt(C_{i} * C_{j})
-        d = np.diag(C)
-        coeffs = C / np.sqrt(np.outer(d, d))
-        return coeffs
 
     def _calculate_wong_k(self):
         w = np.array(self.w.todense()).tolist()
@@ -178,13 +176,22 @@ class GeneralizedVector(Vector):
         return np.array(k)
 
     def _calculate_pearson_k(self):
-        k = self._sparse_corrcoef(self.freq)
+        A = self.freq.astype(np.float64)
+        n = A.shape[1]
+
+        # Compute the covariance matrix
+        rowsum = A.sum(1)
+        centering = rowsum.dot(rowsum.T.conjugate()) / n
+        C = (A.dot(A.T.conjugate()) - centering) / (n - 1)
+
+        # The correlation coefficients are given by
+        # C_{i,j} / sqrt(C_{i} * C_{j})
+        d = np.diag(C)
+        k = C / np.sqrt(np.outer(d, d))
+
         return np.abs(k)
 
     def _get_similarities(self, q):
-        vectorizer = TfidfVectorizer(vocabulary=self.terms, analyzer=_analyze_query)
-        q = vectorizer.fit_transform([q])
-
         q = q.dot(self.k)
         d = self.w.transpose().dot(self.k)
 
@@ -229,7 +236,14 @@ class TCPHandler(socketserver.BaseRequestHandler):
                 'success': success
             }).encode())
         elif request['action'] == 'query':
-            self.request.sendall(MODEL.query(request['query'], request['count']).encode())
+            self.request.sendall(
+                MODEL.query(request['token'], request['query'], request['count']).encode()
+            )
+        elif request['action'] == 'update_query':
+            self.request.sendall(
+                MODEL.update_query(request['token'], request['document'], request['positive'],
+                                   request['count']).encode()
+            )
         else:
             self.request.sendall(json.dumps({
                 'action': 'error',

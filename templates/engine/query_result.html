@@ -11,7 +11,7 @@
             </p>
         </div>
         <div id="search-results" data-query="{{ query }}">
-            {% include 'engine/document_list.html' with documents=documents %}
+            {% include 'engine/document_list.html' with documents=documents evaluate=1 %}
         </div>
         <div class="pagination">
             <span class="step-links">
@@ -37,6 +37,13 @@
 
 
 <script>
+    function update_search(doc, positive) {
+        var query = $('#search-results').data('query');
+        $.get('/update_search/', {'query': query, 'document': doc, 'positive': positive}, function (data) {
+            $('#content').html(data);
+        })
+    }
+
     $(function () {
         $('.page-link').click(function (event) {
             var page = $(this).data('page');
@@ -44,6 +51,16 @@
             $.get('/search/', {'q': query, 'page': page}, function (data) {
                 $('#content').html(data);
             })
+        });
+
+        $('.btn-like').click(function (event) {
+            var doc = $(this).data('doc');
+            update_search(doc, true);
+        });
+
+        $('.btn-dislike').click(function (event) {
+            var doc = $(this).data('doc');
+            update_search(doc, false);
         });
     });
 </script>

@@ -16,6 +16,30 @@ from engine.models import Document, Directory
 CURRENT_DIR = None
 
 
+def _render_search(request, response, query, page):
+    start = time.time()
+    results = []
+    if response['success']:
+        results = [Document.objects.get(directory=CURRENT_DIR, filename=doc['document'])
+                   for doc in response['results']]
+
+    paginator = Paginator(results, 10)
+    results = paginator.page(page)
+
+    return render(request, 'engine/query_result.html', {
+        'query': query,
+        'documents': results,
+        'time': round(time.time() - start, 2)
+    })
+
+
+def _get_token(request):
+    token = request.session.get('token', random.randint(1, 2 ** 64))
+    request.session['token'] = token
+    request.session.set_expiry(300)
+    return token
+
+
 def build(request):
     global CURRENT_DIR
     start = time.time()
@@ -119,25 +143,13 @@ def index(request):
 
 
 def search(request):
-    start = time.time()
+    token = _get_token(request)
     query = request.GET.get('q')
     count = int(request.GET.get('count', '-1'))
     page = request.GET.get('page', 1)
 
-    response = ui.search(query, count)
-    results = []
-    if response['success']:
-        results = [Document.objects.get(directory=CURRENT_DIR, filename=doc['document'])
-                   for doc in response['results']]
-
-    paginator = Paginator(results, 10)
-    results = paginator.page(page)
-
-    return render(request, 'engine/query_result.html', {
-        'query': query,
-        'documents': results,
-        'time': round(time.time() - start, 2)
-    })
+    response = ui.search(token, query, count)
+    return _render_search(request, response, query, page)
 
 
 def set_model(request):
@@ -176,10 +188,20 @@ def summary(request):
     })
 
 
+def update_search(request):
+    token = _get_token(request)
+    query = request.GET.get('query')
+    document = request.GET.get('document')
+    positive = request.GET.get('positive') == 'true'
+    count = int(request.GET.get('count', '-1'))
+    page = request.GET.get('page', 1)
+
+    response = ui.update_search(token, document, positive, count)
+    return _render_search(request, response, query, page)
+
+
 def visit(request, document):
-    token = request.session.get('token', random.randint(1, 2 ** 64))
-    request.session['token'] = token
-    request.session.set_expiry(300)
+    token = _get_token(request)
 
     doc = Document.objects.get(directory=CURRENT_DIR, filename=document)
     doc.visits += 1

@@ -4,7 +4,18 @@
             <p class="result-line">
                 <a class="doc-title" href="{% url 'visit' doc.filename %}">{{ doc.title }}</a>
             </p>
-            <p class="result-line doc-name">{{ doc.filename }}{{ doc.extension }}</p>
+            <span class="result-line doc-name">{{ doc.filename }}{{ doc.extension }}</span>
+            {% if evaluate %}
+                <button type="button" class="btn btn-default btn-xs btn-like" data-doc="{{ doc.filename }}"
+                        style="border: none">
+                    <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
+                </button>
+                {#                TODO Analyze negative feedback#}
+                {#                <button type="button" class="btn btn-default btn-xs btn-dislike" data-doc="{{ doc.filename }}"#}
+                {#                        style="border: none">#}
+                {#                    <span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>#}
+                {#                </button>#}
+            {% endif %}
             <p class="result-line doc-content">{{ doc.content }}...</p>
         </li>
     {% endfor %}

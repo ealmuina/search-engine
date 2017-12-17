@@ -48,17 +48,17 @@
             </div><!-- /.navbar-collapse -->
         </div><!-- /.container-fluid -->
     </nav>
-    {% if build_needed %}
-        <div id="notification">
-            <div id="build-alert" class="alert alert-danger" role="alert">
-                <strong>Warning!</strong> Please execute a <strong>BUILD</strong> action before doing anything else.
+    <div id="content">
+        {% if build_needed %}
+            <div id="notification">
+                <div id="build-alert" class="alert alert-danger" role="alert">
+                    <strong>Warning!</strong> Please execute a <strong>BUILD</strong> action before doing anything else.
+                </div>
             </div>
-        </div>
-    {% else %}
-        <div id="content">
+        {% else %}
             {% block content %}{% endblock %}
-        </div>
-    {% endif %}
+        {% endif %}
+    </div>
 </div>
 
 <div id="search" class="dialog">
