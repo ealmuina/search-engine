@@ -48,7 +48,7 @@
         $('.page-link').click(function (event) {
             var page = $(this).data('page');
             var query = $('#search-results').data('query');
-            $.get('/search/', {'q': query, 'page': page}, function (data) {
+            $.get('/search/', {'q': query, 'page': page, 'continuation': true}, function (data) {
                 $('#content').html(data);
             })
         });

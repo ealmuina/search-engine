@@ -80,7 +80,7 @@ class Evaluator:
 
         results = [0] * 6
         for i, q in enumerate(self.queries):
-            response = ui.search(q, count)
+            response = ui.search(0, q, False, count)
             retrieved = response.get('results', [])
             retrieved = [doc['document'] for doc in retrieved]
             retrieved = [bisect_left(collection, doc) for doc in retrieved]

@@ -50,7 +50,7 @@ class Adviser:
             with open(path, 'rb') as file:
                 return pickle.load(file)
         else:
-            return np.zeros((self.doc_count, self.doc_count))
+            return np.ones((self.doc_count, self.doc_count))
 
     def _save_w(self):
         path = os.path.join(self.path, 'suggestions.bin')

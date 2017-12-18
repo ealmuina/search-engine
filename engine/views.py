@@ -91,6 +91,7 @@ def build(request):
     except Exception:
         CURRENT_DIR = None
         success = False
+    request.session.clear()
     return HttpResponse(round(time.time() - start, 2) if success else -1)
 
 
@@ -149,9 +150,11 @@ def search(request):
     query = request.GET.get('q')
     count = int(request.GET.get('count', '-1'))
     page = request.GET.get('page', 1)
+    continuation = request.GET.get('continuation') == 'true'
+    liked = request.session.get('liked', [])
 
-    response = ui.search(token, query, count)
-    return _render_search(request, response, query, page)
+    response = ui.search(token, query, continuation, count)
+    return _render_search(request, response, query, page, liked)
 
 
 def set_model(request):
@@ -174,7 +177,7 @@ def suggest(request):
                 pass
 
     return render(request, 'engine/suggested_documents.html', {
-        'documents': results
+        'documents': results[:5]
     })
 
 

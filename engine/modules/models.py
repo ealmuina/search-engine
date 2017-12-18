@@ -99,13 +99,16 @@ class Vector:
         self.term_count = self.w.shape[0]
         self.doc_count = self.w.shape[1]
 
-    def query(self, token, q, count):
+    def query(self, token, q, count, continuation=False):
         if count == -1:
             count = self.doc_count
 
         if isinstance(q, str):
-            vectorizer = TfidfVectorizer(vocabulary=self.terms, analyzer=_analyze_query)
-            q = vectorizer.fit_transform([q])
+            if continuation:
+                q = self.last_query[token]
+            else:
+                vectorizer = TfidfVectorizer(vocabulary=self.terms, analyzer=_analyze_query)
+                q = vectorizer.fit_transform([q])
 
         self.last_query[token] = q
         similarities = self._get_similarities(q)
@@ -237,7 +240,12 @@ class TCPHandler(socketserver.BaseRequestHandler):
             }).encode())
         elif request['action'] == 'query':
             self.request.sendall(
-                MODEL.query(request['token'], request['query'], request['count']).encode()
+                MODEL.query(
+                    request['token'],
+                    request['query'],
+                    request['count'],
+                    request['continuation']
+                ).encode()
             )
         elif request['action'] == 'update_query':
             self.request.sendall(

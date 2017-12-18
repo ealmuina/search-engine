@@ -51,11 +51,12 @@ def set_model(model):
     }, settings.NETWORK['models']['host'], settings.NETWORK['models']['port'])
 
 
-def search(token, query, count):
+def search(token, query, continuation, count):
     return send_json({
         'action': 'query',
         'token': token,
         'query': query,
+        'continuation': continuation,
         'count': count
     }, settings.NETWORK['models']['host'], settings.NETWORK['models']['port'], True)
 
