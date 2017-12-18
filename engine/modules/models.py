@@ -137,7 +137,7 @@ class Vector:
         if positive:
             q += d
         else:
-            q -= 0.5 * d
+            q -= d
         return self.query(token, q, count)
 
 

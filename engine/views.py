@@ -16,12 +16,14 @@ from engine.models import Document, Directory
 CURRENT_DIR = None
 
 
-def _render_search(request, response, query, page):
+def _render_search(request, response, query, page, liked=()):
     start = time.time()
     results = []
     if response['success']:
         results = [Document.objects.get(directory=CURRENT_DIR, filename=doc['document'])
                    for doc in response['results']]
+        for doc in results:
+            doc.liked = doc.filename in liked
 
     paginator = Paginator(results, 10)
     results = paginator.page(page)
@@ -196,8 +198,15 @@ def update_search(request):
     count = int(request.GET.get('count', '-1'))
     page = request.GET.get('page', 1)
 
+    liked = request.session.get('liked', [])
+    if positive and document not in liked:
+        liked.append(document)
+    elif not positive and document in liked:
+        liked.remove(document)
+    request.session['liked'] = liked
+
     response = ui.update_search(token, document, positive, count)
-    return _render_search(request, response, query, page)
+    return _render_search(request, response, query, page, liked)
 
 
 def visit(request, document):

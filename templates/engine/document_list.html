@@ -6,15 +6,17 @@
             </p>
             <span class="result-line doc-name">{{ doc.filename }}{{ doc.extension }}</span>
             {% if evaluate %}
-                <button type="button" class="btn btn-default btn-xs btn-like" data-doc="{{ doc.filename }}"
-                        style="border: none">
-                    <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
-                </button>
-                {#                TODO Analyze negative feedback#}
-                {#                <button type="button" class="btn btn-default btn-xs btn-dislike" data-doc="{{ doc.filename }}"#}
-                {#                        style="border: none">#}
-                {#                    <span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>#}
-                {#                </button>#}
+                {% if doc.liked %}
+                    <button type="button" class="btn btn-default btn-xs btn-like active" data-doc="{{ doc.filename }}"
+                            style="border: none">
+                        <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
+                    </button>
+                {% else %}
+                    <button type="button" class="btn btn-default btn-xs btn-like" data-doc="{{ doc.filename }}"
+                            style="border: none">
+                        <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
+                    </button>
+                {% endif %}
             {% endif %}
             <p class="result-line doc-content">{{ doc.content }}...</p>
         </li>

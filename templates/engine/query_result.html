@@ -55,12 +55,10 @@
 
         $('.btn-like').click(function (event) {
             var doc = $(this).data('doc');
-            update_search(doc, true);
-        });
-
-        $('.btn-dislike').click(function (event) {
-            var doc = $(this).data('doc');
-            update_search(doc, false);
+            if ($(this).hasClass('active'))
+                update_search(doc, false);
+            else
+                update_search(doc, true);
         });
     });
 </script>
