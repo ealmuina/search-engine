@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 
 {% load staticfiles %}
+{% load helpers %}
 
 <html>
 <head>
@@ -59,6 +60,10 @@
             {% block content %}{% endblock %}
         {% endif %}
     </div>
+
+    <footer class="footer">
+        <p>&copy; {% current_time '%Y' %} Awesome Company, Inc.</p>
+    </footer>
 </div>
 
 <div id="search" class="dialog">

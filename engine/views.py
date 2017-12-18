@@ -185,7 +185,7 @@ def summary(request):
     result = ui.get_summary()
     result = [(
         cluster['terms'],
-        Document.objects.filter(filename__in=cluster['documents'])
+        Document.objects.filter(filename__in=cluster['documents'], directory=CURRENT_DIR)
     ) for cluster in result]
     return render(request, 'engine/summary.html', {
         'build_needed': not CURRENT_DIR,
