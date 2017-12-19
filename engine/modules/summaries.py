@@ -31,6 +31,7 @@ class Summary:
 
     @staticmethod
     def _choose_k(X, start, end, step):
+        step = max(step, 1)
         scores = []
         for k in range(start, end + 1, step):
             kmeans = MiniBatchKMeans(n_clusters=k).fit(X)
@@ -91,6 +92,8 @@ class Summary:
         for i in range(self.kmeans.n_clusters):
             freq = self.kmeans.freq[np.array(clusters[i])].sum(axis=0).argsort()[::-1]
             terms.append([self.kmeans.terms[ind] for ind in freq[:10]])
+
+        clusters = [[self.doc_names[i] for i in cluster] for cluster in clusters]
 
         return json.dumps([
             {'terms': terms[i], 'documents': clusters[i]} for i in range(self.kmeans.n_clusters)
