@@ -3,3 +3,4 @@ venv/
 datasets/
 *.sqlite3
 network.json
+crawler.json
