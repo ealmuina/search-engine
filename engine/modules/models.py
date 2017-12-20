@@ -203,7 +203,7 @@ class GeneralizedVector(Vector):
 
     def build(self, path):
         super().build(path)
-        self.k = self._calculate_pearson_k()
+        self.k = self._calculate_wong_k()
 
 
 class TCPHandler(socketserver.BaseRequestHandler):

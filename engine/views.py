@@ -27,6 +27,7 @@ def _render_search(request, response, query, page, liked=()):
 
     paginator = Paginator(results, 10)
     results = paginator.page(page)
+    print(response)
 
     return render(request, 'engine/query_result.html', {
         'query': query,
@@ -111,7 +112,7 @@ def get_evaluations(request):
     query = request.GET.get('query')
     beta = float(request.GET.get('beta'))
 
-    response = ui.search(query, count)
+    response = ui.search(0, query, False, count)
     retrieved = response.get('results', [])
     retrieved = [doc['document'] for doc in retrieved]
 
