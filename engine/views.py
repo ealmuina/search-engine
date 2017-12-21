@@ -27,7 +27,6 @@ def _render_search(request, response, query, page, liked=()):
 
     paginator = Paginator(results, 10)
     results = paginator.page(page)
-    print(response)
 
     return render(request, 'engine/query_result.html', {
         'query': query,
